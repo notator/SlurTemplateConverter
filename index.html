@@ -34,16 +34,21 @@
             </ul>
             <br />
             Choose an SVG file containing slur templates:
-            <input type="file" accept="image/svg+xml" onchange="loadFile(event)">
+            <input type="file" accept="image/svg+xml" onchange="_AP.globals.loadFile(event)">
         </div>
 
         <div id="div2" style="display:none">
-            <input id="convertButton" style="height:30px; background-color:greenyellow" type="button" value="Convert Templates" onclick="convertAllSlurTemplates()" /><br />
+            <input id="convertButton" style="height:30px; background-color:greenyellow" type="button" value="Convert Templates" onclick="_AP.globals.convertAllSlurTemplates()" /><br />
             <iframe id="iFrame" src=""></iframe>
         </div>
 
     </div>
 
-    <script src="converter.js" type="text/javascript"></script>
+    <script src="es6/_AP.js"></script>
+    <script type="module" src="es6/Point.js"></script>
+    <script type="module" src="es6/Line.js"></script>
+    <script type="module" src="es6/Converter.js"></script>
+    <script type="module" src="es6/Globals.js"></script>
+
 </body>
 </html>
