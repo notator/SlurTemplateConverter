@@ -1,14 +1,13 @@
-﻿
-import { Converter } from "./Converter.js";
+﻿import { Converter } from "./Converter.js";
 
-export class Globals
+export class Application
 {
     constructor()
     {
     }
 
     // called when the "Convert Templates" button is clicked.
-    convertAllSlurTemplates()
+    convert()
     {
         function downloadSVG(filename, svg)
         {
@@ -24,9 +23,10 @@ export class Globals
         }
 
         let iFrame = document.getElementById("iFrame"),
-            svg = iFrame.contentDocument;
+            svg = iFrame.contentDocument,
+            converter = new Converter();
 
-        svg = _AP.converter.convertSlurTemplates(svg);
+        svg = converter.convertSlurTemplates(svg);
 
         let button = document.getElementById("convertButton");
         button.value = "Done";
@@ -61,11 +61,4 @@ export class Globals
 
 }
 
-window.addEventListener("load", function()
-{
-    "use strict";
-
-    _AP.converter = new Converter();
-    _AP.globals = new Globals();
-
-}, false);
+App = new Application();

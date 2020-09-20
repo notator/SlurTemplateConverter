@@ -3,9 +3,8 @@ import { Line } from "./Line.js";
 
 export class Converter
 {
-    constructor(svg)
+    constructor()
     {
-        this.svg = svg;
     }
 
     convertSlurTemplates(svg) 
