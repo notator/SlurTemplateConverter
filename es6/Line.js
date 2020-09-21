@@ -11,7 +11,7 @@ export class Line
 
     clone()
     {
-        return new Line(this.point1, this.point2);
+        return new Line(this.point1.clone(), this.point2.clone());
     }
 
     // Moves this line's end-points by dx, dy.
@@ -45,13 +45,13 @@ export class Line
             pC = line2.point1,
             pD = line2.point2,
             // Line AB is a1x + b1y = c1  
-            a1 = pB.y - pA.y,
-            b1 = pA.x - pB.x,
-            c1 = (a1 * pA.x) + (b1 * pA.y),
+            a1 = pB.getY() - pA.getY(),
+            b1 = pA.getX() - pB.getX(),
+            c1 = (a1 * pA.getX()) + (b1 * pA.getY()),
             // Line CD is a2x + b2y = c2  
-            a2 = pD.y - pC.y,
-            b2 = pC.x - pD.x,
-            c2 = (a2 * pC.x) + (b2 * pC.y),
+            a2 = pD.getY() - pC.getY(),
+            b2 = pC.getX() - pD.getX(),
+            c2 = (a2 * pC.getX()) + (b2 * pC.getY()),
 
             divisor = (a1 * b2) - (a2 * b1);
 
