@@ -13,14 +13,65 @@ export class Converter
         function ConvertShortSlurTemplates(svg)
         {
             // Returns an object having the following attributes:
-            //    .origin
+            //    .point1
             //    .control1
             //    .control2
-            //    .endPoint
+            //    .point2
             // All these attributes are Points having absolute coordinates.
             function getTemplatePoints(slurTemplate)
             {
-                return {};
+                function getPoint1(str)
+                {
+                    let strs = str.split(','), xStr, yStr;
+                    
+                    xStr = strs[0].replace('M', '');
+                    yStr = strs[1];
+
+                    return new Point(parseFloat(xStr), parseFloat(yStr));
+                }
+
+                function getOtherPoints(str, point1, absoluteUnits)
+                {
+                    let otherPoints = {},
+                        strs = str.split(',');
+
+                    otherPoints.control1 = new Point(parseFloat(strs[0]), parseFloat(strs[1]));
+                    otherPoints.control2 = new Point(parseFloat(strs[2]), parseFloat(strs[3]));
+                    otherPoints.point2 = new Point(parseFloat(strs[4]), parseFloat(strs[5]));
+
+                    if(absoluteUnits === false)
+                    {
+                        let dx = point1.getX(),
+                            dy = point1.getY();
+
+                        otherPoints.control1.move(dx, dy);
+                        otherPoints.control2.move(dx, dy);
+                        otherPoints.point2.move(dx, dy);
+                    }
+
+                    return otherPoints;
+                }
+
+                let templatePoints = {},
+                    dStr = slurTemplate.getAttribute("d"),
+                    strs, absoluteUnits = false;
+
+                strs = dStr.split('c');
+                if(strs.length === 1)
+                {
+                    strs = dstr.split('C');
+                    absoluteUnits = true;
+                }
+
+                templatePoints.point1 = getPoint1(strs[0]);
+
+                let otherPoints = getOtherPoints(strs[1], templatePoints.point1, absoluteUnits);
+
+                templatePoints.control1 = otherPoints.control1;
+                templatePoints.control2 = otherPoints.control2;
+                templatePoints.point2 = otherPoints.point2;
+
+                return templatePoints;
             }
 
             var slurTemplates = svg.getElementsByClassName("shortSlurTemplate");

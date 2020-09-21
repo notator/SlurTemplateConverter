@@ -11,14 +11,14 @@ export class Line
 
     clone()
     {
-        return new Line(point1, point2);
+        return new Line(this.point1, this.point2);
     }
 
     // Moves this line's end-points by dx, dy.
     move(dx, dy)
     {
-        point1.move(dx, dy);
-        point2.move(dx, dy);
+        this.point1.move(dx, dy);
+        this.point2.move(dx, dy);
     }
 
     // Returns the intersection point between this line and line2.
@@ -40,8 +40,8 @@ export class Line
     //             y = (a1c2 - a2c1) / (a1b2 – a2b1)    
     intersectionPoint(line2)
     {
-        let pA = point1,
-            pB = point2,
+        let pA = this.point1,
+            pB = this.point2,
             pC = line2.point1,
             pD = line2.point2,
             // Line AB is a1x + b1y = c1  
