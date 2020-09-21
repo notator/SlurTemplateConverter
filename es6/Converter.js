@@ -12,13 +12,35 @@ export class Converter
         // A short slur template is an arc having only two points.
         function ConvertShortSlurTemplates(svg)
         {
+            // Returns an object having the following attributes:
+            //    .origin
+            //    .control1
+            //    .control2
+            //    .endPoint
+            // All these attributes are Points having absolute coordinates.
+            function getTemplatePoints(slurTemplate)
+            {
+                return {};
+            }
+
             var slurTemplates = svg.getElementsByClassName("shortSlurTemplate");
 
             for(let i = 0; i < slurTemplates.length; ++i)
             {
                 let slurTemplate = slurTemplates[i],
+                    templateStrokeWidthStr = slurTemplate.getAttribute('stroke-width'),
+                    templatePoints = getTemplatePoints(slurTemplate),
                     parentElement = slurTemplate.parentElement,
                     slur = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+                if(templateStrokeWidthStr === null)
+                {
+                    // "stroke-width" was defined in a style, not locally.
+                    let style = window.getComputedStyle(slurTemplate);
+                    templateStrokeWidthStr = style.getPropertyValue('stroke-width');
+                }
+
+                let templateStrokeWidth = parseFloat(templateStrokeWidthStr); 
 
                 //Set the short slur's attributes here (including its class)
 
