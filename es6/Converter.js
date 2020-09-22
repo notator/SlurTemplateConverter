@@ -111,11 +111,11 @@ export class Converter
                         relY = point1.getY();
 
                     // set to relative coordinates.
-                    outerCP1.move(-relX, -relY);
-                    outerCP2.move(-relX, -relY);
-                    point2.move(-relX, -relY);
-                    innerCP2.move(-relX, -relY);
-                    innerCP1.move(-relX, -relY);
+                    //outerCP1.move(-relX, -relY);
+                    //outerCP2.move(-relX, -relY);
+                    //point2.move(-relX, -relY);
+                    //innerCP2.move(-relX, -relY);
+                    //innerCP1.move(-relX, -relY);
 
                     outerCP1.round(1);
                     outerCP2.round(1);
@@ -131,12 +131,12 @@ export class Converter
                         innerCP1Str = getCoordinateString(innerCP1),
                         dStr;
                     
-                    dStr = "M" + point1Str + "c" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "c" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
+                    dStr = "M" + point1Str + "C" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "C" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
 
                     return dStr;
                 }
 
-                const endAngle = 3,
+                const endAngle = 5,
                     tps = templatePoints,
                     lineA = new Line(tps.control1, tps.control2),
                     heightA = lineA.point2.getY() - lineA.point1.getY(),
@@ -153,7 +153,7 @@ export class Converter
 
                 let lineB = lineA.clone();
                 // cosA cannot be 0, because template conditions are imposed in getTemplatePoints() above.
-                lineB.move(0, ((templateStrokeWidth / 2) / cosA) * -1);
+                lineB.move(0, ((templateStrokeWidth / 1.5) / cosA) * -1);
 
                 const outerCP1 = lineB.intersectionPoint(lineC),
                     outerCP2 = lineB.intersectionPoint(lineF),
@@ -190,6 +190,13 @@ export class Converter
                 slur.setAttribute('class', 'slur');
 
                 parentElement.insertBefore(slur, slurTemplate);
+            }
+
+            for(let i = slurTemplates.length - 1; i >= 0; --i)
+            {
+                let slurTemplate = slurTemplates[i],
+                    parentElement = slurTemplate.parentElement;
+                
                 parentElement.removeChild(slurTemplate);
             }
         }
