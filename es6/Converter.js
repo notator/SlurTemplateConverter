@@ -142,7 +142,7 @@ export class Converter
                     return new Line(controlLine.point1, point);
                 }
 
-                // Arguments and the returned string are absolute coordinates.
+                // Both the arguments and the returned string are absolute coordinates.
                 function getDStr(point1, outerCP1, outerCP2, point2, innerCP2, innerCP1)
                 {
                     function getCoordinateString(point)
@@ -192,7 +192,7 @@ export class Converter
 
                 let lineB = lineA.clone();
                 // cosA cannot be 0, because template conditions are imposed in getTemplatePoints() above.
-                lineB.move(0, ((templateStrokeWidth / 1.5) / cosA) * -1);
+                lineB.move(0, ((templateStrokeWidth * 0.6) / cosA) * -1);
 
                 const outerCP1 = lineB.intersectionPoint(lineC),
                     outerCP2 = lineB.intersectionPoint(lineF),
