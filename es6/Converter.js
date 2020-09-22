@@ -1,6 +1,8 @@
 ﻿import { Point } from "./Point.js";
 import { Line } from "./Line.js";
 
+// Converts objects having class "shortSlurTemplate" or "longSlurTemplate" to objects of class 'slur'.
+// The templates can use either relative or absolute coordinates in their path.d attributes.
 export class Converter
 {
     constructor()
@@ -20,24 +22,67 @@ export class Converter
             // All these attributes are Points having absolute coordinates.
             function getTemplatePoints(slurTemplate)
             {
-                function getPoint1(str)
+                // Returns an array of Numbers that are in the order given in the argument string.
+                // This function is a bit complicated because the SVG standard allows y-coordinates
+                // to be separated from x-coordinates not only by ',' characters, but also by '+' and
+                // '-' characters.
+                function getCoordinates(cStr)
                 {
-                    let strs = str.split(','), xStr, yStr;
-                    
-                    xStr = strs[0].replace('M', '');
-                    yStr = strs[1];
+                    let str = "", coordinates = [];
 
-                    return new Point(parseFloat(xStr), parseFloat(yStr));
+                    for(let i = 0; i < cStr.length; ++i)
+                    {
+                        if(cStr[i] === '-' || cStr[i] === '+')
+                        {
+                            if(str.length === 0)
+                            {
+                                str += cStr[i]; // + or - at start of str
+                            }
+                            else // move to next coordinate (no comma separator!)
+                            {
+                                coordinates.push(parseFloat(str));
+                                str = cStr[i];
+                            }
+                        }
+                        else if(cStr[i] === '.')
+                        {
+                            if(str.length === 0)
+                            {
+                                str = "0.";
+                            }
+                            else // continue decimal
+                            {
+                                str += ".";
+                            }
+                        }
+                        else if(cStr[i] === ',')// move to next coordinate
+                        {
+                            coordinates.push(parseFloat(str));
+                            str = "";
+                        }
+                        else if(Number.parseInt(cStr[i]) !== NaN)
+                        {
+                            str += cStr[i];
+                        }
+                        else
+                        {
+                            throw "Error parsing coordinates string.";
+                        }
+                    }
+
+                    coordinates.push(parseFloat(str));
+
+                    return coordinates;
                 }
 
                 function getOtherPoints(str, point1, absoluteUnits)
                 {
                     let otherPoints = {},
-                        strs = str.split(',');
+                        coordinates = getCoordinates(str);
 
-                    otherPoints.control1 = new Point(parseFloat(strs[0]), parseFloat(strs[1]));
-                    otherPoints.control2 = new Point(parseFloat(strs[2]), parseFloat(strs[3]));
-                    otherPoints.point2 = new Point(parseFloat(strs[4]), parseFloat(strs[5]));
+                    otherPoints.control1 = new Point(coordinates[0], coordinates[1]);
+                    otherPoints.control2 = new Point(coordinates[2], coordinates[3]);
+                    otherPoints.point2 = new Point(coordinates[4], coordinates[5]);
 
                     if(absoluteUnits === false)
                     {
@@ -64,7 +109,8 @@ export class Converter
                     absoluteUnits = true;
                 }
 
-                templatePoints.point1 = getPoint1(strs[0]);
+                let coordinates = getCoordinates(strs[0].replace('M', ''));
+                templatePoints.point1 = new Point(coordinates[0], coordinates[1]) 
 
                 let otherPoints = getOtherPoints(strs[1], templatePoints.point1, absoluteUnits);
 
@@ -96,7 +142,7 @@ export class Converter
                     return new Line(controlLine.point1, point);
                 }
 
-                // Arguments are absolute coordinates. The returned string is in relative coordinates
+                // Arguments and the returned string are absolute coordinates.
                 function getDStr(point1, outerCP1, outerCP2, point2, innerCP2, innerCP1)
                 {
                     function getCoordinateString(point)
@@ -109,13 +155,6 @@ export class Converter
 
                     const relX = point1.getX(),
                         relY = point1.getY();
-
-                    // set to relative coordinates.
-                    //outerCP1.move(-relX, -relY);
-                    //outerCP2.move(-relX, -relY);
-                    //point2.move(-relX, -relY);
-                    //innerCP2.move(-relX, -relY);
-                    //innerCP1.move(-relX, -relY);
 
                     outerCP1.round(1);
                     outerCP2.round(1);
