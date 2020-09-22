@@ -255,7 +255,14 @@ export class Converter
                 //Set the longSlur's attributes here (including its class)
 
                 parentElement.insertBefore(longSlur, longSlurTemplate);
-                parentElement.removeChild(longSlurTemplate);
+            }
+
+            for(let i = longSlurTemplates.length - 1; i >= 0; --i)
+            {
+                let slurTemplate = longSlurTemplates[i],
+                    parentElement = slurTemplate.parentElement;
+
+                parentElement.removeChild(slurTemplate);
             }
         }
 
