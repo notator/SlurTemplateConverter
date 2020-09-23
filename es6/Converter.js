@@ -175,7 +175,7 @@ export class Converter
                     return dStr;
                 }
 
-                const endAngle = 5,
+                const endAngle = 5, // degrees
                     tps = templatePoints,
                     lineA = new Line(tps.control1, tps.control2),
                     heightA = lineA.point2.getY() - lineA.point1.getY(),
@@ -190,16 +190,17 @@ export class Converter
                     lineE = getAngledLine(controlLine2, -endAngle),
                     lineF = getAngledLine(controlLine2, endAngle);
 
-                let lineB = lineA.clone();
-                // cosA cannot be 0, because template conditions are imposed in getTemplatePoints() above.
-                lineB.move(0, ((templateStrokeWidth * 0.6) / cosA) * -1);
+                let lineB = lineA.clone(),
+                    lineK = lineA.clone(),
+                    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+
+                lineB.move(0, -yShift);
+                lineK.move(0, yShift);
 
                 const outerCP1 = lineB.intersectionPoint(lineC),
                     outerCP2 = lineB.intersectionPoint(lineF),
-                    lineG = new Line(tps.control1, outerCP1),
-                    lineH = new Line(tps.control2, outerCP2),
-                    innerCP1 = lineD.intersectionPoint(lineG),
-                    innerCP2 = lineE.intersectionPoint(lineH),
+                    innerCP1 = lineK.intersectionPoint(lineD),
+                    innerCP2 = lineK.intersectionPoint(lineE),
                     dStr = getDStr(tps.point1, outerCP1, outerCP2, tps.point2, innerCP2, innerCP1);
 
                 return dStr;
@@ -415,7 +416,7 @@ export class Converter
                     return dStr;
                 }
 
-                const endAngle = 5,
+                const endAngle = 5, // degrees
                     tps = templatePoints,
                     lineA = new Line(tps.control1, tps.control2),
                     heightA = lineA.point2.getY() - lineA.point1.getY(),
@@ -430,16 +431,17 @@ export class Converter
                     lineE = getAngledLine(controlLine2, -endAngle),
                     lineF = getAngledLine(controlLine2, endAngle);
 
-                let lineB = lineA.clone();
-                // cosA cannot be 0, because template conditions are imposed in getTemplatePoints() above.
-                lineB.move(0, ((templateStrokeWidth * 0.6) / cosA) * -1);
+                let lineB = lineA.clone(),
+                    lineK = lineA.clone(),
+                    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+
+                lineB.move(0, -yShift);
+                lineK.move(0, yShift);
 
                 const outerCP1 = lineB.intersectionPoint(lineC),
                     outerCP2 = lineB.intersectionPoint(lineF),
-                    lineG = new Line(tps.control1, outerCP1),
-                    lineH = new Line(tps.control2, outerCP2),
-                    innerCP1 = lineD.intersectionPoint(lineG),
-                    innerCP2 = lineE.intersectionPoint(lineH),
+                    innerCP1 = lineK.intersectionPoint(lineD),
+                    innerCP2 = lineK.intersectionPoint(lineE),
                     dStr = getDStr(tps.point1, outerCP1, outerCP2, tps.point2, innerCP2, innerCP1);
 
                 return dStr;
