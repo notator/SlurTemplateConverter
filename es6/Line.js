@@ -5,8 +5,8 @@ export class Line
 {
     constructor(point1, point2)
 	{
-        this.point1 = new Point(point1.getX(), point1.getY());
-        this.point2 = new Point(point2.getX(), point2.getY());
+        this.point1 = new Point(point1.x, point1.y);
+        this.point2 = new Point(point2.x, point2.y);
     }
 
     clone()
@@ -45,13 +45,13 @@ export class Line
             pC = line2.point1,
             pD = line2.point2,
             // Line AB is a1x + b1y = c1  
-            a1 = pB.getY() - pA.getY(),
-            b1 = pA.getX() - pB.getX(),
-            c1 = (a1 * pA.getX()) + (b1 * pA.getY()),
+            a1 = pB.y - pA.y,
+            b1 = pA.x - pB.x,
+            c1 = (a1 * pA.x) + (b1 * pA.y),
             // Line CD is a2x + b2y = c2  
-            a2 = pD.getY() - pC.getY(),
-            b2 = pC.getX() - pD.getX(),
-            c2 = (a2 * pC.getX()) + (b2 * pC.getY()),
+            a2 = pD.y - pC.y,
+            b2 = pC.x - pD.x,
+            c2 = (a2 * pC.x) + (b2 * pC.y),
 
             divisor = (a1 * b2) - (a2 * b1);
 
