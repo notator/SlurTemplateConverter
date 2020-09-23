@@ -17,6 +17,21 @@ export class Converter
     // class="slur" attribute. The "slur" CSS definition is expected to exist already in the svg. 
     convertSlurTemplates(svg) 
     {
+        function getTemplateStrokeWidth(slurTemplate)
+        {
+            let strokeWidthStr = slurTemplate.getAttribute('stroke-width');
+
+            if(strokeWidthStr === null)
+            {
+                // "stroke-width" was defined in a style, not locally.
+                let style = window.getComputedStyle(slurTemplate);
+
+                strokeWidthStr = style.getPropertyValue('stroke-width');
+            }
+
+            return parseFloat(strokeWidthStr);
+        }
+
         // Returns an object having the following attributes:
         //    .startPair
         //    .endPair
@@ -231,19 +246,11 @@ export class Converter
         for(let i = 0; i < slurTemplates.length; ++i)
         {
             let slurTemplate = slurTemplates[i],
-                templateStrokeWidthStr = slurTemplate.getAttribute('stroke-width'),
-                templatePointPairs = getTemplatePointPairs(slurTemplate);
-
-            if(templateStrokeWidthStr === null)
-            {
-                // "stroke-width" was defined in a style, not locally.
-                let style = window.getComputedStyle(slurTemplate);
-                templateStrokeWidthStr = style.getPropertyValue('stroke-width');
-            }
-
-            let parentElement = slurTemplate.parentElement,
+                templateStrokeWidth = getTemplateStrokeWidth(slurTemplate),
+                templatePointPairs = getTemplatePointPairs(slurTemplate),
+                parentElement = slurTemplate.parentElement,
                 slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
-                templateStrokeWidth = parseFloat(templateStrokeWidthStr),
+
                 dStr = getSlurDStr(templatePointPairs, templateStrokeWidth);
 
             slur.setAttribute('d', dStr);
