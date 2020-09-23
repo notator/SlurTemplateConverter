@@ -1,50 +1,70 @@
 ﻿import { Point } from "./Point.js";
 import { Line } from "./Line.js";
 
-// Converts objects having class "shortSlurTemplate" or "longSlurTemplate" to objects of class 'slur'.
-// The templates can use either relative or absolute coordinates in their path.d attributes.
+// Converts objects having class "slurTemplate" to objects of class 'slur'.
+// The templates must use absolute coordinates in their path.d attributes.
 export class Converter
 {
     constructor()
     {
     }
 
+    // Returns the svg in which "slurTemplate" paths have been replaced by their equivalent "slur" 
+    // A slur template is a path having two end points between which there are zero or more tangent points.
+    // The path.class attribute must be set to "slurTemplate", which defines the stroke-width.
+    // The path.d string must contain absolute coordinates (i.e. use 'C' and 'S', not 'c' and 's').
+    // The slur replaces the slurTemplate at the same position in the svg, and is styled by being given a
+    // class="slur" attribute. The "slur" CSS definition is expected to exist already in the svg. 
     convertSlurTemplates(svg) 
     {
-        // A short slur template is an arc having only two points.
-        function ConvertShortSlurTemplates(svg)
+        // Returns an object having the following attributes:
+        //    .startPair
+        //    .endPair
+        //    .tangentPairs[]
+        // Each Pair is an object having two Points: point and control.
+        // For example:
+        //     templatePointPairs.startPair.point
+        //     templatePointPairs.tangentPairs[0].control
+        //     etc.
+        // All Points have absolute coordinates.
+        function getTemplatePointPairs(slurTemplate)
         {
-            // Returns an object having the following attributes:
-            //    .point1
-            //    .control1
-            //    .control2
-            //    .point2
-            // All these attributes are Points having absolute coordinates.
-            function getTemplatePoints(slurTemplate)
+            function getPoints(dStr)
             {
-                // Returns an array of Numbers that are in the order given in the argument string.
-                // This function is a bit complicated because the SVG standard allows y-coordinates
-                // to be separated from x-coordinates not only by ',' characters, but also by '+' and
-                // '-' characters.
-                function getCoordinates(cStr)
+                // Returns an array of Numbers that are in the order given in the argument string (the path's d-attribute).
+                // This function is complicated by the fact that the SVG standard allows y-coordinates
+                // to be separated from x-coordinates not only by ',' characters, but also by '+' and '-' characters.
+                // Relative path coordinates ('m', 'c', 's') are not allowed.
+                // 'M', 'C', 'S', 'Z' and 'z' characters in dStr are ignored.
+                function getCoordinates(dStr)
                 {
                     let str = "", coordinates = [];
 
-                    for(let i = 0; i < cStr.length; ++i)
+                    for(let i = 0; i < dStr.length; ++i) // ignore 'M'
                     {
-                        if(cStr[i] === '-' || cStr[i] === '+')
+                        if(dStr[i] === 'm' || dStr[i] === 'c' || dStr[i] === 's')
+                        {
+                            throw "Relative path coordinates are not allowed."
+                        }
+
+                        if(dStr[i] === 'M' || dStr[i] === 'Z' || dStr[i] === 'z')
+                        {
+                            continue;
+                        }
+
+                        if(dStr[i] === '-' || dStr[i] === '+')
                         {
                             if(str.length === 0)
                             {
-                                str += cStr[i]; // + or - at start of str
+                                str += dStr[i]; // + or - at start of str
                             }
                             else // move to next coordinate (no comma separator!)
                             {
                                 coordinates.push(parseFloat(str));
-                                str = cStr[i];
+                                str = dStr[i];
                             }
                         }
-                        else if(cStr[i] === '.')
+                        else if(dStr[i] === '.')
                         {
                             if(str.length === 0)
                             {
@@ -55,14 +75,14 @@ export class Converter
                                 str += ".";
                             }
                         }
-                        else if(cStr[i] === ',')// move to next coordinate
+                        else if(dStr[i] === ',' || dStr[i] === 'C' || dStr[i] === 'S') // move to next coordinate
                         {
                             coordinates.push(parseFloat(str));
                             str = "";
                         }
-                        else if(Number.parseInt(cStr[i]) !== NaN)
+                        else if(Number.parseInt(dStr[i]) !== NaN)
                         {
-                            str += cStr[i];
+                            str += dStr[i];
                         }
                         else
                         {
@@ -75,434 +95,170 @@ export class Converter
                     return coordinates;
                 }
 
-                function getOtherPoints(str, point1, absoluteUnits)
+                let coordinates = getCoordinates(dStr),
+                    points = [];
+
+                for(let i = 0; i < coordinates.length; i += 2)
                 {
-                    let otherPoints = {},
-                        coordinates = getCoordinates(str);
-
-                    otherPoints.control1 = new Point(coordinates[0], coordinates[1]);
-                    otherPoints.control2 = new Point(coordinates[2], coordinates[3]);
-                    otherPoints.point2 = new Point(coordinates[4], coordinates[5]);
-
-                    if(absoluteUnits === false)
-                    {
-                        // set absolute units
-                        let dx = point1.getX(),
-                            dy = point1.getY();
-
-                        otherPoints.control1.move(dx, dy);
-                        otherPoints.control2.move(dx, dy);
-                        otherPoints.point2.move(dx, dy);
-                    }
-
-                    return otherPoints;
+                    points.push(new Point(coordinates[i], coordinates[i + 1]));
                 }
-
-                let templatePoints = {},
-                    dStr = slurTemplate.getAttribute("d"),
-                    strs, absoluteUnits = false;
-
-                strs = dStr.split('c');
-                if(strs.length === 1)
-                {
-                    strs = dStr.split('C');
-                    absoluteUnits = true;
-                }
-
-                let coordinates = getCoordinates(strs[0].replace('M', ''));
-                templatePoints.point1 = new Point(coordinates[0], coordinates[1]) 
-
-                let otherPoints = getOtherPoints(strs[1], templatePoints.point1, absoluteUnits);
-
-                templatePoints.control1 = otherPoints.control1;
-                templatePoints.control2 = otherPoints.control2;
-                templatePoints.point2 = otherPoints.point2;
-
-                if(templatePoints.point1.getX() >= templatePoints.point2.getX())
-                {
-                    throw "Illegal short slur template: the first point must be left of the end-point!";
-                }
-
-                if(templatePoints.control1.getX() >= templatePoints.control2.getX())
-                {
-                    throw "Illegal short slur template: control point 1 must be left of control point 2!";
-                }
-
-                return templatePoints;
+                return points;
             }
 
-            // Returns the string that is going to be the new slur's d-attribute.
-            function getSlurDStr(templatePoints, templateStrokeWidth)
+            function getPointPairs(points)
             {
-                function getAngledLine(controlLine, angle)
-                {
-                    let point = controlLine.point2.clone();
-                    point.rotate(controlLine.point1, angle);
+                let pointPairs = {};
 
-                    return new Line(controlLine.point1, point);
+                pointPairs.startPair = {};
+                pointPairs.startPair.point = points[0];
+                pointPairs.startPair.control = points[1];
+
+                pointPairs.endPair = {};
+                pointPairs.endPair.point = points[points.length - 1];
+                pointPairs.endPair.control = points[points.length - 2];
+
+                pointPairs.tangentPairs = [];
+                for(let i = 2; i < points.length - 2; i += 2)
+                {
+                    let tangentPair = {};
+                    tangentPair.control = points[i];
+                    tangentPair.point = points[i + 1];
+                    pointPairs.tangentPairs.push(tangentPair);
                 }
 
-                // Both the arguments and the returned string are absolute coordinates.
-                function getDStr(point1, outerCP1, outerCP2, point2, innerCP2, innerCP1)
-                {
-                    function getCoordinateString(point)
-                    {
-                        let xStr = point.getX().toString(),
-                            yStr = point.getY().toString();
-
-                        return xStr + "," + yStr;
-                    }
-
-                    const relX = point1.getX(),
-                        relY = point1.getY();
-
-                    outerCP1.round(1);
-                    outerCP2.round(1);
-                    point2.round(1);
-                    innerCP2.round(1);
-                    innerCP1.round(1);
-
-                    let point1Str = getCoordinateString(point1),
-                        outerCP1Str = getCoordinateString(outerCP1),
-                        outerCP2Str = getCoordinateString(outerCP2),
-                        point2Str = getCoordinateString(point2),
-                        innerCP2Str = getCoordinateString(innerCP2),
-                        innerCP1Str = getCoordinateString(innerCP1),
-                        dStr;
-                    
-                    dStr = "M" + point1Str + "C" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "C" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
-
-                    return dStr;
-                }
-
-                const endAngle = 5, // degrees
-                    tps = templatePoints,
-                    lineA = new Line(tps.control1, tps.control2),
-                    heightA = lineA.point2.getY() - lineA.point1.getY(),
-                    widthA = lineA.point2.getX() - lineA.point1.getX(),
-                    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-                    cosA = widthA / hypA,           
-                    controlLine1 = new Line(tps.point1, tps.control1),
-                    controlLine2 = new Line(tps.point2, tps.control2),
-
-                    lineC = getAngledLine(controlLine1, -endAngle),
-                    lineD = getAngledLine(controlLine1, endAngle),
-                    lineE = getAngledLine(controlLine2, -endAngle),
-                    lineF = getAngledLine(controlLine2, endAngle);
-
-                let lineB = lineA.clone(),
-                    lineK = lineA.clone(),
-                    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
-
-                lineB.move(0, -yShift);
-                lineK.move(0, yShift);
-
-                const outerCP1 = lineB.intersectionPoint(lineC),
-                    outerCP2 = lineB.intersectionPoint(lineF),
-                    innerCP1 = lineK.intersectionPoint(lineD),
-                    innerCP2 = lineK.intersectionPoint(lineE),
-                    dStr = getDStr(tps.point1, outerCP1, outerCP2, tps.point2, innerCP2, innerCP1);
-
-                return dStr;
+                return pointPairs;
             }
 
-            var slurTemplates = svg.getElementsByClassName("shortSlurTemplate");
+            let dStr = slurTemplate.getAttribute("d"),
+                points = getPoints(dStr),
+                templatePointPairs = getPointPairs(points);
 
-            for(let i = 0; i < slurTemplates.length; ++i)
+            if(templatePointPairs.startPair.point.getX() >= templatePointPairs.endPair.point.getX())
             {
-                let slurTemplate = slurTemplates[i],
-                    templateStrokeWidthStr = slurTemplate.getAttribute('stroke-width'),
-                    templatePoints = getTemplatePoints(slurTemplate);
-
-                if(templateStrokeWidthStr === null)
-                {
-                    // "stroke-width" was defined in a style, not locally.
-                    let style = window.getComputedStyle(slurTemplate);
-                    templateStrokeWidthStr = style.getPropertyValue('stroke-width');
-                }
-
-                let parentElement = slurTemplate.parentElement,
-                    slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
-                    templateStrokeWidth = parseFloat(templateStrokeWidthStr),
-                    dStr = getSlurDStr(templatePoints, templateStrokeWidth); 
-
-                slur.setAttribute('d', dStr);
-                slur.setAttribute('class', 'slur');
-
-                parentElement.insertBefore(slur, slurTemplate);
+                throw "Illegal slur template: the start point must be left of the end point!";
             }
 
-            for(let i = slurTemplates.length - 1; i >= 0; --i)
+            if(templatePointPairs.startPair.control.getX() >= templatePointPairs.endPair.control.getX())
             {
-                let slurTemplate = slurTemplates[i],
-                    parentElement = slurTemplate.parentElement;
-                
-                parentElement.removeChild(slurTemplate);
+                throw "Illegal slur template: control point 1 must be left of control point 2!";
             }
+
+            return templatePointPairs;
         }
 
-        // A long slur template has one or more smooth control points
-        // in addition to its two end points.
-        function ConvertLongSlurTemplates(svg)
+        // Returns the string that is going to be the new slur's d-attribute.
+        function getSlurDStr(templatePointPairs, templateStrokeWidth)
         {
-            // Returns an object having the following attributes:
-            //    .point1
-            //    .control1
-            //    .control2
-            //    .point2
-            //    [controlPoint, point] -- can be empty
-            // All these attributes are Points having absolute coordinates.
-            function getTemplatePointPairs(slurTemplate)
+            function getAngledLine(controlLine, angle)
             {
-                function getTPointPairs(dStr, absoluteUnits)
-                {
-                    // Returns an array of Numbers that are in the order given in the argument string (the path's d-attribute).
-                    // This function is a bit complicated because the SVG standard allows y-coordinates
-                    // to be separated from x-coordinates not only by ',' characters, but also by '+' and
-                    // '-' characters.
-                    // 'M', 'C', 'c', 'S', 's', 'Z' and 'z' characters in dStr are ignored.
-                    function getCoordinates(dStr)
-                    {
-                        let str = "", coordinates = [];
+                let point = controlLine.point2.clone();
+                point.rotate(controlLine.point1, angle);
 
-                        for(let i = 0; i < dStr.length; ++i) // ignore 'M'
-                        {
-                            if(dStr[i] === 'M' || dStr[i] === 'm' || dStr[i] === 'Z' || dStr[i] === 'z')
-                            {
-                                continue;
-                            }
-                            if(dStr[i] === '-' || dStr[i] === '+')
-                            {
-                                if(str.length === 0)
-                                {
-                                    str += dStr[i]; // + or - at start of str
-                                }
-                                else // move to next coordinate (no comma separator!)
-                                {
-                                    coordinates.push(parseFloat(str));
-                                    str = dStr[i];
-                                }
-                            }
-                            else if(dStr[i] === '.')
-                            {
-                                if(str.length === 0)
-                                {
-                                    str = "0.";
-                                }
-                                else // continue decimal
-                                {
-                                    str += ".";
-                                }
-                            }
-                            else if(dStr[i] === ',' || dStr[i] === 'C' || dStr[i] === 'c' || dStr[i] === 'S' || dStr[i] === 's') // move to next coordinate
-                            {
-                                coordinates.push(parseFloat(str));
-                                str = "";
-                            }
-                            else if(Number.parseInt(dStr[i]) !== NaN)
-                            {
-                                str += dStr[i];
-                            }
-                            else
-                            {
-                                throw "Error parsing coordinates string.";
-                            }
-                        }
-
-                        coordinates.push(parseFloat(str));
-
-                        return coordinates;
-                    }
-
-                    function getPoints(coordinates, absoluteUnits)
-                    {
-                        let points = [];
-                        for(let i = 0; i < coordinates.length; i += 2)
-                        {
-                            points.push(new Point(coordinates[i], coordinates[i + 1]));
-                        }
-
-                        if(absoluteUnits === false)
-                        {
-                            // set absolute units
-                            let dx = points[0].getX(),
-                                dy = points[0].getY();
-
-                            for(let i = 1; i < points.length; ++i)
-                            {
-                                points[i].move(dx, dy);
-                            }
-                        }
-                        return points;
-                    }
-
-                    function getPointPairs(points)
-                    {
-                        let pointPairs = {};
-                        
-                        pointPairs.startPair = {};
-                        pointPairs.startPair.point = points[0];
-                        pointPairs.startPair.control = points[1];
-
-                        pointPairs.endPair = {};
-                        pointPairs.endPair.point = points[points.length - 1];
-                        pointPairs.endPair.control = points[points.length - 2];
-
-                        pointPairs.tangentPairs = [];
-                        for(let i = 2; i < points.length - 2; i += 2)
-                        {
-                            let tangentPair = {};
-                            tangentPair.control = points[i];
-                            tangentPair.point = points[i + 1];
-                            pointPairs.tangentPairs.push(tangentPair);                            
-                        }
-
-                        return pointPairs;
-                    }
-
-                    let coordinates = getCoordinates(dStr),
-                        points = getPoints(coordinates, absoluteUnits),
-                        templatePointPairs = getPointPairs(points);
-
-                    return templatePointPairs;
-                }
-
-                let dStr = slurTemplate.getAttribute("d"),
-                    absoluteUnits = false;
-
-                if(dStr.indexOf('C') >= 0)
-                {
-                    absoluteUnits = true;
-                }
-
-                let templatePointPairs = getTPointPairs(dStr, absoluteUnits);
-
-                if(templatePointPairs.startPair.point.getX() >= templatePointPairs.endPair.point.getX())
-                {
-                    throw "Illegal slur template: the start point must be left of the end point!";
-                }
-
-                if(templatePointPairs.startPair.control.getX() >= templatePointPairs.endPair.control.getX())
-                {
-                    throw "Illegal slur template: control point 1 must be left of control point 2!";
-                }
-
-                return templatePointPairs;
+                return new Line(controlLine.point1, point);
             }
 
-            // Returns the string that is going to be the new slur's d-attribute.
-            function getSlurDStr(templatePointPairs, templateStrokeWidth)
+            // Both the arguments and the returned string are absolute coordinates.
+            function getDStr(point1, outerCP1, outerCP2, point2, innerCP2, innerCP1)
             {
-                function getAngledLine(controlLine, angle)
+                function getCoordinateString(point)
                 {
-                    let point = controlLine.point2.clone();
-                    point.rotate(controlLine.point1, angle);
+                    let xStr = point.getX().toString(),
+                        yStr = point.getY().toString();
 
-                    return new Line(controlLine.point1, point);
+                    return xStr + "," + yStr;
                 }
 
-                // Both the arguments and the returned string are absolute coordinates.
-                function getDStr(point1, outerCP1, outerCP2, point2, innerCP2, innerCP1)
-                {
-                    function getCoordinateString(point)
-                    {
-                        let xStr = point.getX().toString(),
-                            yStr = point.getY().toString();
+                const relX = point1.getX(),
+                    relY = point1.getY();
 
-                        return xStr + "," + yStr;
-                    }
+                outerCP1.round(1);
+                outerCP2.round(1);
+                point2.round(1);
+                innerCP2.round(1);
+                innerCP1.round(1);
 
-                    const relX = point1.getX(),
-                        relY = point1.getY();
+                let point1Str = getCoordinateString(point1),
+                    outerCP1Str = getCoordinateString(outerCP1),
+                    outerCP2Str = getCoordinateString(outerCP2),
+                    point2Str = getCoordinateString(point2),
+                    innerCP2Str = getCoordinateString(innerCP2),
+                    innerCP1Str = getCoordinateString(innerCP1),
+                    dStr;
 
-                    outerCP1.round(1);
-                    outerCP2.round(1);
-                    point2.round(1);
-                    innerCP2.round(1);
-                    innerCP1.round(1);
-
-                    let point1Str = getCoordinateString(point1),
-                        outerCP1Str = getCoordinateString(outerCP1),
-                        outerCP2Str = getCoordinateString(outerCP2),
-                        point2Str = getCoordinateString(point2),
-                        innerCP2Str = getCoordinateString(innerCP2),
-                        innerCP1Str = getCoordinateString(innerCP1),
-                        dStr;
-
-                    dStr = "M" + point1Str + "C" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "C" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
-
-                    return dStr;
-                }
-
-                const endAngle = 5, // degrees
-                    startPair = templatePointPairs.startPair,
-                    endPair = templatePointPairs.endPair,
-                    lineA = new Line(startPair.control, endPair.control),
-                    heightA = lineA.point2.getY() - lineA.point1.getY(),
-                    widthA = lineA.point2.getX() - lineA.point1.getX(),
-                    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-                    cosA = widthA / hypA,
-                    startControlLine = new Line(startPair.point, startPair.control),
-                    endControlLine = new Line(endPair.point, endPair.control),
-
-                    lineC = getAngledLine(startControlLine, -endAngle),
-                    lineD = getAngledLine(startControlLine, endAngle),
-                    lineE = getAngledLine(endControlLine, -endAngle),
-                    lineF = getAngledLine(endControlLine, endAngle);
-
-                let lineB = lineA.clone(),
-                    lineK = lineA.clone(),
-                    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
-
-                lineB.move(0, -yShift);
-                lineK.move(0, yShift);
-
-                const outerCP1 = lineB.intersectionPoint(lineC),
-                    outerCP2 = lineB.intersectionPoint(lineF),
-                    innerCP1 = lineK.intersectionPoint(lineD),
-                    innerCP2 = lineK.intersectionPoint(lineE),
-                    dStr = getDStr(startPair.point, outerCP1, outerCP2, endPair.point, innerCP2, innerCP1);
+                dStr = "M" + point1Str + "C" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "C" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
 
                 return dStr;
             }
 
-            var slurTemplates = svg.getElementsByClassName("longSlurTemplate");
-
-            for(let i = 0; i < slurTemplates.length; ++i)
+            function getSlurPointPairSequence(templatePointPairs, templateStrokeWidth)
             {
-                let slurTemplate = slurTemplates[i],
-                    templateStrokeWidthStr = slurTemplate.getAttribute('stroke-width'),
-                    templatePointPairs = getTemplatePointPairs(slurTemplate);
 
-                if(templateStrokeWidthStr === null)
-                {
-                    // "stroke-width" was defined in a style, not locally.
-                    let style = window.getComputedStyle(slurTemplate);
-                    templateStrokeWidthStr = style.getPropertyValue('stroke-width');
-                }
-
-                let parentElement = slurTemplate.parentElement,
-                    slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
-                    templateStrokeWidth = parseFloat(templateStrokeWidthStr),
-                    dStr = getSlurDStr(templatePointPairs, templateStrokeWidth);
-
-                slur.setAttribute('d', dStr);
-                slur.setAttribute('class', 'slur');
-
-                parentElement.insertBefore(slur, slurTemplate);
             }
+            const endAngle = 5, // degrees
+                startPair = templatePointPairs.startPair,
+                endPair = templatePointPairs.endPair,
+                lineA = new Line(startPair.control, endPair.control),
+                heightA = lineA.point2.getY() - lineA.point1.getY(),
+                widthA = lineA.point2.getX() - lineA.point1.getX(),
+                hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
+                cosA = widthA / hypA,
+                startControlLine = new Line(startPair.point, startPair.control),
+                endControlLine = new Line(endPair.point, endPair.control),
 
-            for(let i = slurTemplates.length - 1; i >= 0; --i)
-            {
-                let slurTemplate = slurTemplates[i],
-                    parentElement = slurTemplate.parentElement;
+                lineC = getAngledLine(startControlLine, -endAngle),
+                lineD = getAngledLine(startControlLine, endAngle),
+                lineE = getAngledLine(endControlLine, -endAngle),
+                lineF = getAngledLine(endControlLine, endAngle);
 
-                parentElement.removeChild(slurTemplate);
-            }
+            let lineB = lineA.clone(),
+                lineK = lineA.clone(),
+                yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+
+            lineB.move(0, -yShift);
+            lineK.move(0, yShift);
+
+            const outerCP1 = lineB.intersectionPoint(lineC),
+                outerCP2 = lineB.intersectionPoint(lineF),
+                innerCP1 = lineK.intersectionPoint(lineD),
+                innerCP2 = lineK.intersectionPoint(lineE),
+                dStr = getDStr(startPair.point, outerCP1, outerCP2, endPair.point, innerCP2, innerCP1);
+
+            return dStr;
         }
 
-        ConvertShortSlurTemplates(svg);
-        ConvertLongSlurTemplates(svg);
+        var slurTemplates = svg.getElementsByClassName("slurTemplate");
+
+        for(let i = 0; i < slurTemplates.length; ++i)
+        {
+            let slurTemplate = slurTemplates[i],
+                templateStrokeWidthStr = slurTemplate.getAttribute('stroke-width'),
+                templatePointPairs = getTemplatePointPairs(slurTemplate);
+
+            if(templateStrokeWidthStr === null)
+            {
+                // "stroke-width" was defined in a style, not locally.
+                let style = window.getComputedStyle(slurTemplate);
+                templateStrokeWidthStr = style.getPropertyValue('stroke-width');
+            }
+
+            let parentElement = slurTemplate.parentElement,
+                slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
+                templateStrokeWidth = parseFloat(templateStrokeWidthStr),
+                dStr = getSlurDStr(templatePointPairs, templateStrokeWidth);
+
+            slur.setAttribute('d', dStr);
+            slur.setAttribute('class', 'slur');
+
+            parentElement.insertBefore(slur, slurTemplate);
+        }
+
+        for(let i = slurTemplates.length - 1; i >= 0; --i)
+        {
+            let slurTemplate = slurTemplates[i],
+                parentElement = slurTemplate.parentElement;
+
+            parentElement.removeChild(slurTemplate);
+        }
 
         return svg;
     }
