@@ -283,37 +283,71 @@ export class Converter
                 return tangentPointPairSequence;
             }
 
-            function setStartAndEndControlPoints(pointPairSequence)
+            // The pointPair sequence contains: startPair + one or more tangentPairs + endPair
+            function setLongPointPairSequence(pointPairSequence, upperOrLowerStr)
             {
-                            //const endAngle = 5, // degrees
-            //    startPair = templatePointPairs.startPair,
-            //    endPair = templatePointPairs.endPair,
-            //    lineA = new Line(startPair.control, endPair.control),
-            //    heightA = lineA.point2.y - lineA.point1.y,
-            //    widthA = lineA.point2.x - lineA.point1.x,
-            //    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-            //    cosA = widthA / hypA,
-            //    startControlLine = new Line(startPair.point, startPair.control),
-            //    endControlLine = new Line(endPair.point, endPair.control),
+                function addControl2(pointPair)
+                {
+                    let c2Point = pointPair.control.clone();
 
-            //    lineC = getAngledLine(startControlLine, -endAngle),
-            //    lineD = getAngledLine(startControlLine, endAngle),
-            //    lineE = getAngledLine(endControlLine, -endAngle),
-            //    lineF = getAngledLine(endControlLine, endAngle);
+                    c2Point.rotate(pointPair.point, 180);
 
-            //let lineB = lineA.clone(),
-            //    lineK = lineA.clone(),
-            //    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+                    pointPair.control2 = c2Point;
 
-            //lineB.move(0, -yShift);
-            //lineK.move(0, yShift);
+                    return pointPair;
+                }
 
-            //const upperCP1 = lineB.intersectionPoint(lineC),
-            //    upperCP2 = lineB.intersectionPoint(lineF),
-            //    lowerCP1 = lineK.intersectionPoint(lineD),
-            //    lowerCP2 = lineK.intersectionPoint(lineE),
-            //    dStr = getDStr(startPair.point, upperCP1, upperCP2, endPair.point, lowerCP2, lowerCP1);
+                // Returns two new points: the new point control and tangent control points.
+                function getTwoControlPoints(pointPair, tangentPoint, tangentControlPoint, endAngle)
+                {
+                    let lineA = new Line(pointPair.control, tangentControlPoint),                        
+                        heightA = lineA.point2.y - lineA.point1.y,
+                        widthA = lineA.point2.x - lineA.point1.x,
+                        hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
+                        cosA = widthA / hypA,
+                        startControlLine = new Line(pointPair.point, pointPair.control),
+                        tangentControlLine = new Line(tangentPoint, tangentControlPoint),
+                        lineC = getAngledLine(startControlLine, endAngle),
+                        lineB = lineA.clone(),
+                        yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above)
 
+                    yShift = (endAngle > 0) ? yShift : yShift * -1;
+                    lineB.move(0, -yShift);
+
+                    let pointCtlPoint = lineB.intersectionPoint(lineC),
+                        tangentCtlPoint = lineB.intersectionPoint(tangentControlLine);
+
+                    return { pointControlPoint: pointCtlPoint.clone(), tangentControlPoint: tangentCtlPoint.clone() };
+                }
+
+                const endAngle = (upperOrLowerStr === "upper") ? 5 : -5; // degrees
+                let
+                    startPair = pointPairSequence[0],
+                    firstTangentPair = pointPairSequence[1],
+                    lastTangentPair = pointPairSequence[pointPairSequence.length - 2],
+                    endPair = pointPairSequence[pointPairSequence.length - 1],
+                    firstTangentTriplet, lastTangentTriplet;
+                
+                firstTangentTriplet = addControl2(firstTangentPair);
+
+                if(pointPairSequence.length > 3)
+                {
+                    lastTangentTriplet = addControl2(lastTangentPair);
+                }
+                else
+                {
+                    lastTangentTriplet = firstTangentTriplet;
+                }
+
+                let controlPoints;
+                
+                controlPoints = getTwoControlPoints(startPair, firstTangentTriplet.point, firstTangentTriplet.control, endAngle);
+                startPair.control = controlPoints.pointControlPoint;
+                firstTangentTriplet.control = controlPoints.tangentControlPoint;
+
+                controlPoints = getTwoControlPoints(endPair, lastTangentTriplet.point, lastTangentTriplet.control2, -endAngle);
+                endPair.control = controlPoints.pointControlPoint;
+                lastTangentTriplet.control2 = controlPoints.tangentControlPoint;
             }
 
             // returns a pointPair sequence that includes the start and end points.
@@ -325,7 +359,7 @@ export class Converter
                 upperPointPairSequence.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointPairSequence.push(pairClone(templatePointPairs.endPair));
 
-                setStartAndEndControlPoints(upperPointPairSequence);
+                setLongPointPairSequence(upperPointPairSequence, "upper");
                 
                 return upperPointPairSequence;
             }
@@ -340,7 +374,7 @@ export class Converter
                 lowerPointPairSequence.splice(0, 0, pairClone(templatePointPairs.endPair));
                 lowerPointPairSequence.push(pairClone(templatePointPairs.startPair));
 
-                setStartAndEndControlPoints(lowerPointPairSequence);
+                setLongPointPairSequence(lowerPointPairSequence, "lower");
 
                 return lowerPointPairSequence;
             }
@@ -371,39 +405,12 @@ export class Converter
 
                 let dStr = "";
 
-                if(upperPointPairSequence.length === 2)
+                if(upperPointPairSequence.length < 3)
                 {
-                    // two point slur
-                    let point1 = upperPointPairSequence[0].point,
-                        upperCP1 = upperPointPairSequence[0].control,
-                        upperCP2 = upperPointPairSequence[1].control,
-                        point2 = upperPointPairSequence[1].point,
-                        lowerCP2 = lowerPointPairSequence[0].control,
-                        lowerCP1 = lowerPointPairSequence[1].control;
-
-                    upperCP1.round(1);
-                    upperCP2.round(1);
-                    point2.round(1);
-                    lowerCP2.round(1);
-                    lowerCP1.round(1);
-
-                    let point1Str = getCoordinateString(point1),
-                        upperCP1Str = getCoordinateString(upperCP1),
-                        upperCP2Str = getCoordinateString(upperCP2),
-                        point2Str = getCoordinateString(point2),
-                        lowerCP2Str = getCoordinateString(lowerCP2),
-                        lowerCP1Str = getCoordinateString(lowerCP1),
-                        dStr;
-
-                    dStr = "M" + point1Str + "C" + upperCP1Str + "," + upperCP2Str + "," + point2Str + "C" + lowerCP2Str + "," + lowerCP1Str + "," + point1Str + "z";
-
+                    throw "Doing long slurs here!";
                 }
-                else
-                {
-                    // slur with tangents
-                    upperPointPairSequence = getPointPairSequence(startPair, upperPointPairSequence);
-                    lowerPointPairSequence = getPointPairSequence(endPair, lowerPointPairSequence);
-                }
+
+                // create the dStr here.
 
                 return dStr;
             }
@@ -432,6 +439,7 @@ export class Converter
             }
             else
             {
+                //dStr = getShortSlurDStr(templatePointPairs, templateStrokeWidth);
                 dStr = getLongSlurDStr(templatePointPairs, templateStrokeWidth);
             }
 
