@@ -161,8 +161,84 @@ export class Converter
             return templatePointPairs;
         }
 
+        function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
+        {
+            function getAngledLine(controlLine, angle)
+            {
+                let point = controlLine.point2.clone();
+                point.rotate(controlLine.point1, angle);
+
+                return new Line(controlLine.point1, point);
+            }
+
+            // Both the arguments and the returned string are absolute coordinates.
+            function getDStr(startPoint, upperCP1, upperCP2, endPoint, lowerCP2, lowerCP1)
+            {
+                function getCoordinateString(point)
+                {
+                    let xStr = point.x.toString(),
+                        yStr = point.y.toString();
+
+                    return xStr + "," + yStr;
+                }
+
+                const relX = startPoint.x,
+                    relY = startPoint.y;
+
+                upperCP1.round(1);
+                upperCP2.round(1);
+                endPoint.round(1);
+                lowerCP2.round(1);
+                lowerCP1.round(1);
+
+                let point1Str = getCoordinateString(startPoint),
+                    upperCP1Str = getCoordinateString(upperCP1),
+                    upperCP2Str = getCoordinateString(upperCP2),
+                    point2Str = getCoordinateString(endPoint),
+                    lowerCP2Str = getCoordinateString(lowerCP2),
+                    lowerCP1Str = getCoordinateString(lowerCP1),
+                    dStr;
+
+                dStr = "M" + point1Str + "C" + upperCP1Str + "," + upperCP2Str + "," + point2Str + "C" + lowerCP2Str + "," + lowerCP1Str + "," + point1Str + "z";
+
+                return dStr;
+            }
+
+            const endAngle = 5, // degrees
+                startPair = templatePointPairs.startPair,
+                endPair = templatePointPairs.endPair,
+                lineA = new Line(startPair.control, endPair.control),
+                heightA = lineA.point2.y - lineA.point1.y,
+                widthA = lineA.point2.x - lineA.point1.x,
+                hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
+                cosA = widthA / hypA,
+                startControlLine = new Line(startPair.point, startPair.control),
+                endControlLine = new Line(endPair.point, endPair.control),
+
+                lineC = getAngledLine(startControlLine, -endAngle),
+                lineD = getAngledLine(startControlLine, endAngle),
+                lineE = getAngledLine(endControlLine, -endAngle),
+                lineF = getAngledLine(endControlLine, endAngle);
+
+            let lineB = lineA.clone(),
+                lineK = lineA.clone(),
+                yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+
+            lineB.move(0, -yShift);
+            lineK.move(0, yShift);
+
+            const upperCP1 = lineB.intersectionPoint(lineC),
+                upperCP2 = lineB.intersectionPoint(lineF),
+                lowerCP1 = lineK.intersectionPoint(lineD),
+                lowerCP2 = lineK.intersectionPoint(lineE),
+                dStr = getDStr(startPair.point, upperCP1, upperCP2, endPair.point, lowerCP2, lowerCP1);
+
+            return dStr;
+        }
+
+
         // Returns the string that is going to be the new slur's d-attribute.
-        function getSlurDStr(templatePointPairs, templateStrokeWidth)
+        function getLongSlurDStr(templatePointPairs, templateStrokeWidth)
         {
             function getAngledLine(controlLine, angle)
             {
@@ -208,6 +284,39 @@ export class Converter
                 return tangentPointPairSequence;
             }
 
+            function setStartAndEndControlPoints(pointPairSequence)
+            {
+                            //const endAngle = 5, // degrees
+            //    startPair = templatePointPairs.startPair,
+            //    endPair = templatePointPairs.endPair,
+            //    lineA = new Line(startPair.control, endPair.control),
+            //    heightA = lineA.point2.y - lineA.point1.y,
+            //    widthA = lineA.point2.x - lineA.point1.x,
+            //    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
+            //    cosA = widthA / hypA,
+            //    startControlLine = new Line(startPair.point, startPair.control),
+            //    endControlLine = new Line(endPair.point, endPair.control),
+
+            //    lineC = getAngledLine(startControlLine, -endAngle),
+            //    lineD = getAngledLine(startControlLine, endAngle),
+            //    lineE = getAngledLine(endControlLine, -endAngle),
+            //    lineF = getAngledLine(endControlLine, endAngle);
+
+            //let lineB = lineA.clone(),
+            //    lineK = lineA.clone(),
+            //    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
+
+            //lineB.move(0, -yShift);
+            //lineK.move(0, yShift);
+
+            //const upperCP1 = lineB.intersectionPoint(lineC),
+            //    upperCP2 = lineB.intersectionPoint(lineF),
+            //    lowerCP1 = lineK.intersectionPoint(lineD),
+            //    lowerCP2 = lineK.intersectionPoint(lineE),
+            //    dStr = getDStr(startPair.point, upperCP1, upperCP2, endPair.point, lowerCP2, lowerCP1);
+
+            }
+
             // returns a pointPair sequence that includes the start and end points.
             function getUpperPointPairSequence(templatePointPairs, templateStrokeWidth)
             {
@@ -217,7 +326,7 @@ export class Converter
                 upperPointPairSequence.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointPairSequence.push(pairClone(templatePointPairs.endPair));
 
-                setStartAndEndControlPoints(lowerPointPairSequence);
+                setStartAndEndControlPoints(upperPointPairSequence);
                 
                 return upperPointPairSequence;
             }
@@ -302,39 +411,9 @@ export class Converter
 
             let upperPointPairSequence = getUpperPointPairSequence(templatePointPairs, templateStrokeWidth),
                 lowerPointPairSequence = getLowerPointPairSequence(templatePointPairs, templateStrokeWidth),
-                dstr = getDStr(upperPointPairSequence, lowerPointPairSequence);
+                dStr = getDStr(upperPointPairSequence, lowerPointPairSequence);
 
             return dStr;
-
-            //const endAngle = 5, // degrees
-            //    startPair = templatePointPairs.startPair,
-            //    endPair = templatePointPairs.endPair,
-            //    lineA = new Line(startPair.control, endPair.control),
-            //    heightA = lineA.point2.y - lineA.point1.y,
-            //    widthA = lineA.point2.x - lineA.point1.x,
-            //    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-            //    cosA = widthA / hypA,
-            //    startControlLine = new Line(startPair.point, startPair.control),
-            //    endControlLine = new Line(endPair.point, endPair.control),
-
-            //    lineC = getAngledLine(startControlLine, -endAngle),
-            //    lineD = getAngledLine(startControlLine, endAngle),
-            //    lineE = getAngledLine(endControlLine, -endAngle),
-            //    lineF = getAngledLine(endControlLine, endAngle);
-
-            //let lineB = lineA.clone(),
-            //    lineK = lineA.clone(),
-            //    yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
-
-            //lineB.move(0, -yShift);
-            //lineK.move(0, yShift);
-
-            //const upperCP1 = lineB.intersectionPoint(lineC),
-            //    upperCP2 = lineB.intersectionPoint(lineF),
-            //    lowerCP1 = lineK.intersectionPoint(lineD),
-            //    lowerCP2 = lineK.intersectionPoint(lineE),
-            //    dStr = getDStr(startPair.point, upperCP1, upperCP2, endPair.point, lowerCP2, lowerCP1);
-
         }
 
         var slurTemplates = svg.getElementsByClassName("slurTemplate");
@@ -346,8 +425,17 @@ export class Converter
                 templatePointPairs = getTemplatePointPairs(slurTemplate),
                 parentElement = slurTemplate.parentElement,
                 slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
+                dStr = "";
 
-                dStr = getSlurDStr(templatePointPairs, templateStrokeWidth);
+            if(templatePointPairs.tangentPairs.length === 0)
+            {
+                dStr = getShortSlurDStr(templatePointPairs, templateStrokeWidth);
+            }
+            else
+            {
+                dStr = getShortSlurDStr(templatePointPairs, templateStrokeWidth);
+                //dStr = getLongSlurDStr(templatePointPairs, templateStrokeWidth);
+            }
 
             slur.setAttribute('d', dStr);
             slur.setAttribute('class', 'slur');
