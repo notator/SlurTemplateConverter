@@ -43,8 +43,10 @@ export class Point
             currentRadians = Math.atan(deltaY / deltaX),
             totalRadians = rotateRadians + currentRadians,
             hypotenuse = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY)),
-            newX = origin.x + (hypotenuse * Math.cos(totalRadians)),
-            newY = origin.y + (hypotenuse * Math.sin(totalRadians));
+            cos = Math.cos(totalRadians),
+            sin = Math.sin(totalRadians),
+            newX = origin.x - (hypotenuse * cos),
+            newY = origin.y - (hypotenuse * sin);
 
         this.x = newX;
         this.y = newY;
