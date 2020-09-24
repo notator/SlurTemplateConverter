@@ -161,6 +161,7 @@ export class Converter
             return templatePointPairs;
         }
 
+        // Returns the string that is going to be the short slur's d-attribute.
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
         {
             function getAngledLine(controlLine, angle)
@@ -236,8 +237,7 @@ export class Converter
             return dStr;
         }
 
-
-        // Returns the string that is going to be the new slur's d-attribute.
+        // Returns the string that is going to be the long slur's d-attribute.
         function getLongSlurDStr(templatePointPairs, templateStrokeWidth)
         {
             function getAngledLine(controlLine, angle)
@@ -256,14 +256,13 @@ export class Converter
                 return { point: pointClone, control: controlClone };
             }
 
-            // Returns an empty array if there are no tangent points
-            // Shift each tangent by shift units at right angles to itself.
-            function shiftedTangentsPointPairSequence(templatePointPairs, shift)
+            // Returns a clone of each tangentPair shifted by shift units at right angles to itself.
+            function shiftedTangentsPointPairSequence(tangentPairs, shift)
             {
                 let tangentPointPairSequence = [];
-                for(let i = 0; i < templatePointPairs.tangentPairs.length; ++i)
+                for(let i = 0; i < tangentPairs.length; ++i)
                 {
-                    tangentPointPairSequence.push(pairClone(templatePointPairs.tangentPairs[i]));
+                    tangentPointPairSequence.push(pairClone(tangentPairs[i]));
                 }
                 for(let i = 0; i < tangentPointPairSequence.length; ++i)
                 {
@@ -274,8 +273,8 @@ export class Converter
                         dy = pPoint.y - cPoint.y,
                         h = Math.sqrt((dx * dx) + (dy * dy)),
                         factor = shift / h,
-                        xShift = dx * factor,
-                        yShift = dy * factor;
+                        xShift = (dy * factor) * -1,
+                        yShift = dx * factor;
 
                     cPoint.move(xShift, yShift);
                     pPoint.move(xShift, yShift);
@@ -321,7 +320,7 @@ export class Converter
             function getUpperPointPairSequence(templatePointPairs, templateStrokeWidth)
             {
                 // move the tangent points and control points outwards
-                let upperPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs, -(templateStrokeWidth / 2));
+                let upperPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs.tangentPairs, -(templateStrokeWidth / 2));
 
                 upperPointPairSequence.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointPairSequence.push(pairClone(templatePointPairs.endPair));
@@ -334,7 +333,7 @@ export class Converter
             function getLowerPointPairSequence(templatePointPairs, templateStrokeWidth)
             {
                 // move the tangent points and control points inwards
-                let lowerPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs, (templateStrokeWidth / 2));
+                let lowerPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs.tangentPairs, (templateStrokeWidth / 2));
 
                 // reverse the point and control direction of the tangents here (only for the lower tangents)
 
@@ -433,8 +432,7 @@ export class Converter
             }
             else
             {
-                dStr = getShortSlurDStr(templatePointPairs, templateStrokeWidth);
-                //dStr = getLongSlurDStr(templatePointPairs, templateStrokeWidth);
+                dStr = getLongSlurDStr(templatePointPairs, templateStrokeWidth);
             }
 
             slur.setAttribute('d', dStr);
