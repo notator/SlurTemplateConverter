@@ -161,17 +161,17 @@ export class Converter
             return templatePointPairs;
         }
 
+        function getAngledLine(controlLine, angle)
+        {
+            let point = controlLine.point2.clone();
+            point.rotate(controlLine.point1, angle);
+
+            return new Line(controlLine.point1, point);
+        }
+
         // Returns the string that is going to be the short slur's d-attribute.
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
         {
-            function getAngledLine(controlLine, angle)
-            {
-                let point = controlLine.point2.clone();
-                point.rotate(controlLine.point1, angle);
-
-                return new Line(controlLine.point1, point);
-            }
-
             // Both the arguments and the returned string are absolute coordinates.
             function getDStr(startPoint, upperCP1, upperCP2, endPoint, lowerCP2, lowerCP1)
             {
@@ -240,14 +240,6 @@ export class Converter
         // Returns the string that is going to be the long slur's d-attribute.
         function getLongSlurDStr(templatePointPairs, templateStrokeWidth)
         {
-            function getAngledLine(controlLine, angle)
-            {
-                let point = controlLine.point2.clone();
-                point.rotate(controlLine.point1, angle);
-
-                return new Line(controlLine.point1, point);
-            }
-
             function pairClone(pointPair)
             {
                 let pointClone = pointPair.point.clone(),
