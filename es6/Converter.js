@@ -278,11 +278,15 @@ export class Converter
             // The pointPair sequence contains: startPair + one or more tangentPairs + endPair
             function setLongPointPairSequence(pointPairSequence, upperOrLowerStr)
             {
+                // Adds .control2 to point pair, diametrically opposite .control,
+                // and returns the result.
                 function addControl2(pointPair)
                 {
-                    let c2Point = pointPair.control.clone();
-
-                    c2Point.rotate(pointPair.point, 180);
+                    let ctlPt = pointPair.control,
+                        point = pointPair.point,
+                        xDiff = point.x - ctlPt.x,
+                        yDiff = point.y - ctlPt.y,
+                        c2Point = new Point(point.x + xDiff, point.y + yDiff);
 
                     pointPair.control2 = c2Point;
 
