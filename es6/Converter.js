@@ -248,50 +248,91 @@ export class Converter
                 return { point: pointClone, control: controlClone };
             }
 
-            // Returns a clone of each tangentPair shifted by shift units at right angles to itself.
-            function shiftedTangentsPointPairSequence(tangentPairs, shift)
+            // Returns tangent point triples of the form {point, controlIn, controlOut}.
+            // Algorithm: For each tangentPair
+            // 1. clone it, and shift the clone by shift units at right angles to itself.
+            // 2. create the triple, setting 
+            //        triple.point = clone.point
+            //        triple.controlIn = clone.control
+            //        triple.controlOut = the mirror of triple.controlIn about triple.point
+            function getShiftedTangentPointTriples(tangentPairs, shift)
             {
-                let tangentPointPairSequence = [];
+                function shiftPoints(tangentPairsClone, shift)
+                {
+                    for(let i = 0; i < tangentPairsClone.length; ++i)
+                    {
+
+                        let cPoint = tangentPairsClone[i].control,
+                            pPoint = tangentPairsClone[i].point,
+                            dx = pPoint.x - cPoint.x,
+                            dy = pPoint.y - cPoint.y,
+                            h = Math.sqrt((dx * dx) + (dy * dy)),
+                            factor = shift / h,
+                            xShift = (dy * factor) * -1,
+                            yShift = dx * factor;
+
+                        cPoint.move(xShift, yShift);
+                        pPoint.move(xShift, yShift);
+                    }
+
+                }
+
+                function getTangentPointTriples(tangentPairsClone)
+                {
+                    function newMirrorControlPoint(point, controlIn)
+                    {
+                        let xDiff = point.x - controlIn.x,
+                            yDiff = point.y - controlIn.y,
+                            controlOut = new Point(point.x + xDiff, point.y + yDiff);
+
+                        return controlOut;
+                    }
+
+                    let tangentPointTriples = []
+                    for(let i = 0; i < tangentPairsClone.length; ++i)
+                    {
+                        let tangentPair = tangentPairsClone[i],
+                            triple = {};
+                        triple.point = tangentPair.point;
+                        triple.controlIn = tangentPair.control;
+                        triple.controlOut = newMirrorControlPoint(triple.point, triple.controlIn);
+
+                        tangentPointTriples.push(triple);
+                    }
+
+                    return tangentPointTriples;
+                }
+
+                let tangentPairsClone = [];
                 for(let i = 0; i < tangentPairs.length; ++i)
                 {
-                    tangentPointPairSequence.push(pairClone(tangentPairs[i]));
-                }
-                for(let i = 0; i < tangentPointPairSequence.length; ++i)
-                {
-                    
-                    let cPoint = tangentPointPairSequence[i].control,
-                        pPoint = tangentPointPairSequence[i].point,
-                        dx = pPoint.x - cPoint.x,
-                        dy = pPoint.y - cPoint.y,
-                        h = Math.sqrt((dx * dx) + (dy * dy)),
-                        factor = shift / h,
-                        xShift = (dy * factor) * -1,
-                        yShift = dx * factor;
-
-                    cPoint.move(xShift, yShift);
-                    pPoint.move(xShift, yShift);
+                    tangentPairsClone.push(pairClone(tangentPairs[i]));
                 }
 
-                return tangentPointPairSequence;
+                shiftPoints(tangentPairsClone, shift);
+
+                let shiftedTangentPointTriples = getTangentPointTriples(tangentPairsClone);
+
+                return shiftedTangentPointTriples;
             }
 
-            // The pointPair sequence contains: startPair + one or more tangentPairs + endPair
-            function setLongPointPairSequence(pointPairSequence, upperOrLowerStr)
+            // The pointTuples contains: startPair + one or more tangentTriples + endPair
+            function setPointTuples(pointTuples, upperOrLowerStr)
             {
-                // Adds .control2 to point pair, diametrically opposite .control,
-                // and returns the result.
-                function addControl2(pointPair)
-                {
-                    let ctlPt = pointPair.control,
-                        point = pointPair.point,
-                        xDiff = point.x - ctlPt.x,
-                        yDiff = point.y - ctlPt.y,
-                        c2Point = new Point(point.x + xDiff, point.y + yDiff);
+                //// Adds .control2 to point pair, diametrically opposite .control,
+                //// and returns the result.
+                //function addControl2(pointPair)
+                //{
+                //    let ctlPt = pointPair.control,
+                //        point = pointPair.point,
+                //        xDiff = point.x - ctlPt.x,
+                //        yDiff = point.y - ctlPt.y,
+                //        c2Point = new Point(point.x + xDiff, point.y + yDiff);
 
-                    pointPair.control2 = c2Point;
+                //    pointPair.control2 = c2Point;
 
-                    return pointPair;
-                }
+                //    return pointPair;
+                //}
 
                 // Returns two new points: the new point control and tangent control points.
                 function getTwoControlPoints(pointPair, tangentPoint, tangentControlPoint, endAngle)
@@ -318,65 +359,71 @@ export class Converter
 
                 const endAngle = (upperOrLowerStr === "upper") ? 5 : -5; // degrees
                 let
-                    startPair = pointPairSequence[0],
-                    firstTangentPair = pointPairSequence[1],
-                    lastTangentPair = pointPairSequence[pointPairSequence.length - 2],
-                    endPair = pointPairSequence[pointPairSequence.length - 1],
-                    firstTangentTriplet, lastTangentTriplet;
-                
-                firstTangentTriplet = addControl2(firstTangentPair);
-
-                if(pointPairSequence.length > 3)
-                {
-                    lastTangentTriplet = addControl2(lastTangentPair);
-                }
-                else
-                {
-                    lastTangentTriplet = firstTangentTriplet;
-                }
+                    startPair = pointTuples[0],
+                    firstTangentTriple = pointTuples[1],
+                    lastTangentTriple = pointTuples[pointTuples.length - 2],
+                    endPair = pointTuples[pointTuples.length - 1];
 
                 let controlPoints;
                 
-                controlPoints = getTwoControlPoints(startPair, firstTangentTriplet.point, firstTangentTriplet.control, endAngle);
+                controlPoints = getTwoControlPoints(startPair, firstTangentTriple.point, firstTangentTriple.controlIn, endAngle);
                 startPair.control = controlPoints.pointControlPoint;
-                firstTangentTriplet.control = controlPoints.tangentControlPoint;
+                firstTangentTriple.controlIn = controlPoints.tangentControlPoint;
 
-                controlPoints = getTwoControlPoints(endPair, lastTangentTriplet.point, lastTangentTriplet.control2, -endAngle);
+                controlPoints = getTwoControlPoints(endPair, lastTangentTriple.point, lastTangentTriple.controlOut, -endAngle);
                 endPair.control = controlPoints.pointControlPoint;
-                lastTangentTriplet.control2 = controlPoints.tangentControlPoint;
+                lastTangentTriple.controlOut = controlPoints.tangentControlPoint;
             }
 
             // returns a pointPair sequence that includes the start and end points.
-            function getUpperPointPairSequence(templatePointPairs, templateStrokeWidth)
+            function getUpperPointsSequence(templatePointPairs, templateStrokeWidth)
             {
                 // move the tangent points and control points outwards
-                let upperPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs.tangentPairs, -(templateStrokeWidth / 2));
+                let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, -(templateStrokeWidth / 2));
 
-                upperPointPairSequence.splice(0, 0, pairClone(templatePointPairs.startPair));
-                upperPointPairSequence.push(pairClone(templatePointPairs.endPair));
+                upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
+                upperPointTuples.push(pairClone(templatePointPairs.endPair));
 
-                setLongPointPairSequence(upperPointPairSequence, "upper");
+                setPointTuples(upperPointTuples, "upper");
                 
-                return upperPointPairSequence;
+                return upperPointTuples;
             }
 
-            function getLowerPointPairSequence(templatePointPairs, templateStrokeWidth)
+            function getLowerPointsSequence(templatePointPairs, templateStrokeWidth)
             {
+                function reverse(pointTuples)
+                {
+                    let reversedTuples = [];
+
+                    for(let i = pointTuples.length - 1; i >= 0; --i)
+                    {
+                        let tuple = pointTuples[i],
+                            temp = tuple.controlIn;
+
+                        tuple.controlIn = tuple.controlOut;
+                        tuple.controlOut = temp;
+
+                        reversedTuples.push(tuple);
+                    }
+
+                    return reversedTuples;
+                }
+
                 // move the tangent points and control points inwards
-                let lowerPointPairSequence = shiftedTangentsPointPairSequence(templatePointPairs.tangentPairs, (templateStrokeWidth / 2));
+                let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, (templateStrokeWidth / 2));
 
-                // reverse the point and control direction of the tangents here (only for the lower tangents)
+                lowerPointTuples = reverse(lowerPointTuples);
 
-                lowerPointPairSequence.splice(0, 0, pairClone(templatePointPairs.endPair));
-                lowerPointPairSequence.push(pairClone(templatePointPairs.startPair));
+                lowerPointTuples.splice(0, 0, pairClone(templatePointPairs.endPair));
+                lowerPointTuples.push(pairClone(templatePointPairs.startPair));
 
-                setLongPointPairSequence(lowerPointPairSequence, "lower");
+                setPointTuples(lowerPointTuples, "lower");
 
-                return lowerPointPairSequence;
+                return lowerPointTuples;
             }
 
             // The arguments and returned string all use absolute coordinates.
-            function getDStr(upperPointPairSequence, lowerPointPairSequence)
+            function getDStr(upperPointTuples, lowerPointTuples)
             {
                 function getCoordinateString(point)
                 {
@@ -401,7 +448,7 @@ export class Converter
 
                 let dStr = "";
 
-                if(upperPointPairSequence.length < 3)
+                if(upperPointTuples.length < 3)
                 {
                     throw "Doing long slurs here!";
                 }
@@ -411,9 +458,9 @@ export class Converter
                 return dStr;
             }
 
-            let upperPointPairSequence = getUpperPointPairSequence(templatePointPairs, templateStrokeWidth),
-                lowerPointPairSequence = getLowerPointPairSequence(templatePointPairs, templateStrokeWidth),
-                dStr = getDStr(upperPointPairSequence, lowerPointPairSequence);
+            let upperPointTuples = getUpperPointsSequence(templatePointPairs, templateStrokeWidth),
+                lowerPointTuples = getLowerPointsSequence(templatePointPairs, templateStrokeWidth),
+                dStr = getDStr(upperPointTuples, lowerPointTuples);
 
             return dStr;
         }

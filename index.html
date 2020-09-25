@@ -21,17 +21,9 @@
             The resulting SVG file is automatically saved in the <em>Downloads</em> folder using the original<br />
             file name prefixed by &ldquo;converted_&rdquo;.<br />
             <br />
-            There are two classes of slur template:
-            <ul class="ulStandard">
-                <li><span class="code">shortSlurTemplate</span>: A simple, two-point path</li>
-                <li><span class="code">longSlurTemplate</span>: A path having two end-points enclosing one or more tangent points.</li>
-            </ul>
-            <br />
-            Each replacement slur:
-            <ul class="ulStandard">
-                <li>has the class: <span class="code">slur</span></li>
-                <li>is added to the SVG file next to its template, before deleting the template.</li>
-            </ul>
+            Slur templates are SVG <span class="code">&lt;path&gt;</span> elements having <span class="code">class="slurTemplate"</span>.<br />
+            The slurs that replaces them are <span class="code">&lt;path&gt;</span> elements having <span class="code">class="slur"</span>.<br />
+            Each slur is added to the SVG file next to its template, before deleting the template.<br />
             <br />
             Choose an SVG file containing slur templates:
             <input type="file" accept="image/svg+xml" onchange="App.loadFile(event)">
