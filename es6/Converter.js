@@ -169,28 +169,25 @@ export class Converter
             return new Line(controlLine.point1, point);
         }
 
+        function getCoordinateString(point)
+        {
+            let xStr, yStr;
+
+            point.round(1);
+            xStr = point.x.toString();
+            yStr = point.y.toString();
+
+            return xStr + "," + yStr;
+        }
+
         // Returns the string that is going to be the short slur's d-attribute.
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
         {
             // Both the arguments and the returned string are absolute coordinates.
             function getDStr(startPoint, upperCP1, upperCP2, endPoint, lowerCP2, lowerCP1)
             {
-                function getCoordinateString(point)
-                {
-                    let xStr = point.x.toString(),
-                        yStr = point.y.toString();
-
-                    return xStr + "," + yStr;
-                }
-
                 const relX = startPoint.x,
                     relY = startPoint.y;
-
-                upperCP1.round(1);
-                upperCP2.round(1);
-                endPoint.round(1);
-                lowerCP2.round(1);
-                lowerCP1.round(1);
 
                 let point1Str = getCoordinateString(startPoint),
                     upperCP1Str = getCoordinateString(upperCP1),
@@ -425,35 +422,42 @@ export class Converter
             // The arguments and returned string all use absolute coordinates.
             function getDStr(upperPointTuples, lowerPointTuples)
             {
-                function getCoordinateString(point)
+                function join(upperPointTuples, lowerPointTuples)
                 {
-                    let xStr = point.x.toString(),
-                        yStr = point.y.toString();
+                    let joint = {};
 
-                    return xStr + "," + yStr;
+                    joint.point = upperPointTuples[upperPointTuples.length - 1].point;
+                    joint.controlIn = upperPointTuples[upperPointTuples.length - 1].control;
+                    joint.controlOut = lowerPointTuples[0].control;
+
+                    upperPointTuples[upperPointTuples.length - 1] = joint;
+                    lowerPointTuples.splice(0, 1);
+                    let joinedTuples = upperPointTuples.concat(lowerPointTuples);
+
+                    return joinedTuples;
                 }
-
-                function getPointPairSequence(startPair, tangentsPointPairSequence)
-                {
-                    let pairSequence = [];
-
-                    pairSequence.push(startPair);
-                    for(let i = 0; i < tangentsPointPairSequence.length; ++i)
-                    {
-                        pairSequence.push(tangentsPointPairSequence[i]);
-                    }
-
-                    return pairSequence;
-                }
-
-                let dStr = "";
 
                 if(upperPointTuples.length < 3)
                 {
                     throw "Doing long slurs here!";
                 }
 
-                // create the dStr here.
+                let dStr = "M",
+                    tuples = join(upperPointTuples,lowerPointTuples);
+                
+                dStr = dStr + getCoordinateString(tuples[0].point) + "C";
+                dStr += getCoordinateString(tuples[0].control) + ",";
+                dStr += getCoordinateString(tuples[1].controlIn) + ",";
+                dStr += getCoordinateString(tuples[1].point) + ",";
+                for(let i = 2; i < tuples.length - 1; ++i)
+                {
+                    dStr += getCoordinateString(tuples[i-1].controlOut) + ",";
+                    dStr += getCoordinateString(tuples[i].controlIn) + ",";
+                    dStr += getCoordinateString(tuples[i].point) + ",";
+                }
+                dStr += getCoordinateString(tuples[tuples.length - 2].controlOut) + ",";
+                dStr += getCoordinateString(tuples[tuples.length - 1].control) + ",";
+                dStr += getCoordinateString(tuples[tuples.length - 1].point) + "z"; 
 
                 return dStr;
             }
