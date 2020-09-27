@@ -313,63 +313,19 @@ export class Converter
                 return shiftedTangentPointTriples;
             }
 
-            // The pointTuples contains: startPair + one or more tangentTriples + endPair
-            function setPointTuples(pointTuples, upperOrLowerStr)
+            function rotateEndControls(pointTuples)
             {
-                //// Adds .control2 to point pair, diametrically opposite .control,
-                //// and returns the result.
-                //function addControl2(pointPair)
-                //{
-                //    let ctlPt = pointPair.control,
-                //        point = pointPair.point,
-                //        xDiff = point.x - ctlPt.x,
-                //        yDiff = point.y - ctlPt.y,
-                //        c2Point = new Point(point.x + xDiff, point.y + yDiff);
+                const angle = 5;
 
-                //    pointPair.control2 = c2Point;
+                let firstPair = pointTuples[0], // rotate control point anticlockwise
+                    lastPair = pointTuples[pointTuples.length - 1], // rotate control point clockwise
+                    firstPoint = firstPair.point,
+                    firstControl = firstPair.control,
+                    lastPoint = lastPair.point,
+                    lastControl = lastPair.control;
 
-                //    return pointPair;
-                //}
-
-                // Returns two new points: the new point control and tangent control points.
-                function getTwoControlPoints(pointPair, tangentPoint, tangentControlPoint, endAngle)
-                {
-                    let lineA = new Line(pointPair.control, tangentControlPoint),                        
-                        heightA = lineA.point2.y - lineA.point1.y,
-                        widthA = lineA.point2.x - lineA.point1.x,
-                        hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-                        cosA = widthA / hypA,
-                        startControlLine = new Line(pointPair.point, pointPair.control),
-                        tangentControlLine = new Line(tangentPoint, tangentControlPoint),
-                        lineC = getAngledLine(startControlLine, endAngle),
-                        lineB = lineA.clone(),
-                        yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above)
-
-                    yShift = (endAngle > 0) ? yShift : yShift * -1;
-                    lineB.move(0, -yShift);
-
-                    let pointCtlPoint = lineB.intersectionPoint(lineC),
-                        tangentCtlPoint = lineB.intersectionPoint(tangentControlLine);
-
-                    return { pointControlPoint: pointCtlPoint.clone(), tangentControlPoint: tangentCtlPoint.clone() };
-                }
-
-                const endAngle = (upperOrLowerStr === "upper") ? 5 : -5; // degrees
-                let
-                    startPair = pointTuples[0],
-                    firstTangentTriple = pointTuples[1],
-                    lastTangentTriple = pointTuples[pointTuples.length - 2],
-                    endPair = pointTuples[pointTuples.length - 1];
-
-                let controlPoints;
-                
-                controlPoints = getTwoControlPoints(startPair, firstTangentTriple.point, firstTangentTriple.controlIn, endAngle);
-                startPair.control = controlPoints.pointControlPoint;
-                firstTangentTriple.controlIn = controlPoints.tangentControlPoint;
-
-                controlPoints = getTwoControlPoints(endPair, lastTangentTriple.point, lastTangentTriple.controlOut, -endAngle);
-                endPair.control = controlPoints.pointControlPoint;
-                lastTangentTriple.controlOut = controlPoints.tangentControlPoint;
+                firstControl.rotate(firstPoint, -angle);
+                lastControl.rotate(lastPoint, angle);
             }
 
             // returns a pointPair sequence that includes the start and end points.
@@ -381,7 +337,7 @@ export class Converter
                 upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointTuples.push(pairClone(templatePointPairs.endPair));
 
-                setPointTuples(upperPointTuples, "upper");
+                rotateEndControls(upperPointTuples);
                 
                 return upperPointTuples;
             }
@@ -414,7 +370,7 @@ export class Converter
                 lowerPointTuples.splice(0, 0, pairClone(templatePointPairs.endPair));
                 lowerPointTuples.push(pairClone(templatePointPairs.startPair));
 
-                setPointTuples(lowerPointTuples, "lower");
+                rotateEndControls(lowerPointTuples);
 
                 return lowerPointTuples;
             }
