@@ -332,7 +332,7 @@ export class Converter
             function getUpperPointsSequence(templatePointPairs, templateStrokeWidth)
             {
                 // move the tangent points and control points outwards
-                let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, -(templateStrokeWidth / 2));
+                let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, -(templateStrokeWidth * 0.4));
 
                 upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointTuples.push(pairClone(templatePointPairs.endPair));
@@ -363,7 +363,7 @@ export class Converter
                 }
 
                 // move the tangent points and control points inwards
-                let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, (templateStrokeWidth / 2));
+                let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, (templateStrokeWidth * 0.4));
 
                 lowerPointTuples = reverse(lowerPointTuples);
 

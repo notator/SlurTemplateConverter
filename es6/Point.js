@@ -35,20 +35,19 @@ export class Point
     }
 
     // Moves this point by rotating it around origin (a Point) by degrees (a Number) degrees.
-    rotate(origin, degrees) 
+    // If degrees is positive, rotation will be clockwise, otherwise anticlockwise.
+    // Algorthm adapted from https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
+    rotate(origin, degrees)
     {
-        let deltaX = this.x - origin.x,
-            deltaY = this.y - origin.y,
-            rotateRadians = (degrees / 360) * (2 * Math.PI),
-            currentRadians = Math.atan(deltaY / deltaX),
-            totalRadians = rotateRadians + currentRadians,
-            hypotenuse = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY)),
-            cos = Math.cos(totalRadians),
-            sin = Math.sin(totalRadians),
-            newX = origin.x - (hypotenuse * cos),
-            newY = origin.y - (hypotenuse * sin);
+        let radians = (degrees / 180) * Math.PI,
+            sin = Math.sin(radians),
+            cos = Math.cos(radians),
+            x = this.x - origin.x, // move origin to 0,0
+            y = this.y - origin.y, // move origin to 0,0
+            newX = (x * cos) - (y * sin), // rotation
+            newY = (x * sin) + (y * cos); // rotation
 
-        this.x = newX;
-        this.y = newY;
+        this.x = newX + origin.x; // move origin back to origin.x,origin.y
+        this.y = newY + origin.y; // move origin back to origin.x,origin.y
     }
 }
