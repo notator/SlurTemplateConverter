@@ -329,10 +329,10 @@ export class Converter
             }
 
             // returns a pointPair sequence that includes the start and end points.
-            function getUpperPointsSequence(templatePointPairs, templateStrokeWidth)
+            function getUpperPointsSequence(templatePointPairs, shiftUp)
             {
                 // move the tangent points and control points outwards
-                let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, -(templateStrokeWidth * 0.4));
+                let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, shiftUp);
 
                 upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
                 upperPointTuples.push(pairClone(templatePointPairs.endPair));
@@ -342,7 +342,8 @@ export class Converter
                 return upperPointTuples;
             }
 
-            function getLowerPointsSequence(templatePointPairs, templateStrokeWidth)
+            // returns a reversed pointPair sequence that includes the start and end points.
+            function getLowerPointsSequence(templatePointPairs, shiftDown)
             {
                 function reverse(pointTuples)
                 {
@@ -363,7 +364,7 @@ export class Converter
                 }
 
                 // move the tangent points and control points inwards
-                let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, (templateStrokeWidth * 0.4));
+                let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, shiftDown);
 
                 lowerPointTuples = reverse(lowerPointTuples);
 
@@ -418,8 +419,9 @@ export class Converter
                 return dStr;
             }
 
-            let upperPointTuples = getUpperPointsSequence(templatePointPairs, templateStrokeWidth),
-                lowerPointTuples = getLowerPointsSequence(templatePointPairs, templateStrokeWidth),
+            let halfLongSlurWidth = templateStrokeWidth * 0.4,
+                upperPointTuples = getUpperPointsSequence(templatePointPairs, -halfLongSlurWidth),
+                lowerPointTuples = getLowerPointsSequence(templatePointPairs, halfLongSlurWidth),
                 dStr = getDStr(upperPointTuples, lowerPointTuples);
 
             return dStr;
