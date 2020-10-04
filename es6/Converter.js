@@ -222,6 +222,14 @@ export class Converter
                 lineK = lineA.clone(),
                 yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
 
+            // make slurs that change direction thinner.
+            if(((startPair.point.y < startPair.control.y) && (endPair.point.y > endPair.control.y))
+            || ((startPair.point.y > startPair.control.y) && (endPair.point.y < endPair.control.y)))
+            {
+                // the slur changes direction
+                yShift *= 0.4; 
+            }
+
             lineB.move(0, -yShift);
             lineK.move(0, yShift);
 
