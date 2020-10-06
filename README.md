@@ -1,6 +1,9 @@
 # SlurTemplateConverter
-This web application converts slur templates in SVG files to proper, pointed slurs.<br />
-
+This web application converts slur templates in SVG files to proper, pointed slurs.<br /><br />
+For example, these slur templates<br />
+<img src="readmeSlurTemplates.png" /><br/>
+are converted to the following slurs:<br />
+<img src="readmeSlurs.png" /><br/>
 Usage:<br />
 1. Load the application by visiting https://james-ingram-act-two.de/open-source/SlurTemplateConverter/
 2. Load a local SVG file by clicking the button provided.
@@ -11,9 +14,11 @@ Usage:<br />
 Details:<br />
 - A slur template is an SVG path element having class "slurTemplate".
 - A slur is an SVG path element having class "slur".
-- Both the "slur" and "slurTemplate" classes must exist in the SVG's CSS styles. They are used but not created by this application.
-The slurTemplate's stroke-width affects the maximum thickness of the created slur. It is typically set to (Gap/2)px.
 - Each slur is created next to the slur template it replaces, before the template is deleted.
+- Both the "slur" and "slurTemplate" classes must exist in the SVG's CSS styles. They are used but not created by this application.
+The slurTemplate's stroke-width affects the maximum thickness of the created slur. It is typically set to (Gap/2)px, where Gap is the vertical distance between two stafflines.
+- Both the "slur" and the "slurTemplate" use absolute coordinates in the SVG path (i.e. M, C and S, not m, c, and s.)
+
 
 A simple, two-point template path has a d-attribute consisting of an "M" and a "C" component:<br />
 ```
