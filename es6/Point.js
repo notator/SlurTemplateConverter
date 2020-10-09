@@ -20,6 +20,16 @@ export class Point
         this.y += dy;
     }
 
+    // The distance between this point and point2
+    distance(point2)
+    {
+        let dx = point2.x - this.x,
+            dy = point2.y - this.y,
+            distance = Math.sqrt((dx * dx) + (dy * dy));
+
+        return distance;
+    }
+
     // Rounds the values of x and y to the given number of decimal places.
     round(decimalPlaces)
     {

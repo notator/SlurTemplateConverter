@@ -17,6 +17,28 @@ export class Converter
     // class="slur" attribute. The "slur" CSS definition is expected to exist already in the svg. 
     convertSlurTemplates(svg) 
     {
+        // Adapted from the cubicBezier function in https://github.com/bit101/CodingMath/blob/master/episode19/utils.js
+        // Found via https://www.youtube.com/watch?v=dXECQRlmIaE.
+        // Properly understood having watched https://www.youtube.com/watch?v=A8CM297pq2Y&list=WL&index=2
+        // function getCubicBezierPoint(p0, c0, c1, p1, t, outPoint)
+        // {
+        //     outPoint = outPoint || {};
+        //     outPoint.x = (Math.pow(1 - t, 3) * p0.x) + (Math.pow(1 - t, 2) * 3 * t * c0.x) + ((1 - t) * 3 * t * t * c1.x) + (t * t * t * p1.x);
+        //     outPoint.y = (Math.pow(1 - t, 3) * p0.y) + (Math.pow(1 - t, 2) * 3 * t * c0.y) + ((1 - t) * 3 * t * t * c1.y) + (t * t * t * p1.y);
+        //     return outPoint;
+        // }
+        // This is the above function with t set to 0.5
+        function getBezierMidPoint(p0, c0, c1, p1)
+        {
+            let coeff1 = 0.125,
+                coeff2 = 0.375,
+                x = (coeff1 * p0.x) + (coeff2 * c0.x) + (coeff2 * c1.x) + (coeff1 * p1.x),
+                y = (coeff1 * p0.y) + (coeff2 * c0.y) + (coeff2 * c1.y) + (coeff1 * p1.y),
+                outPoint = new Point(x,y);
+
+            return outPoint;
+        }
+
         function getTemplateStrokeWidth(slurTemplate)
         {
             let strokeWidthStr = slurTemplate.getAttribute('stroke-width');
@@ -180,8 +202,93 @@ export class Converter
             return xStr + "," + yStr;
         }
 
-        // Returns the string that is going to be the short slur's d-attribute.
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
+        {
+            function getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth)
+            {
+                let lineAu = lineA.clone(), // will move up
+                    heightA = lineA.point2.y - lineA.point1.y,
+                    widthA = lineA.point2.x - lineA.point1.x,
+                    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
+                    cosA = widthA / hypA,
+                    shiftDist = (templateStrokeWidth / cosA),
+                    shift = shiftDist * -1; // move up initially
+
+                lineAu.move(0, shift); // move up
+
+                let C1 = lineAu.intersectionPoint(lineC1outer),
+                    C2 = lineAu.intersectionPoint(lineC2outer),
+                    newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1),
+                    halfThickness = templateMidPoint.distance(newBezierMidPoint),
+                    halfTemplateStrokeWidth = templateStrokeWidth / 2;
+
+                while(Math.abs(halfThickness - halfTemplateStrokeWidth) > 0.1)
+                {
+                    shiftDist *= 0.5;
+                    shift = (halfThickness > halfTemplateStrokeWidth) ? shift = shiftDist : shift = shiftDist * -1;
+
+                    lineAu.move(0, shift);
+                    C1 = lineAu.intersectionPoint(lineC1outer);
+                    C2 = lineAu.intersectionPoint(lineC2outer);
+                    newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1);
+                    halfThickness = templateMidPoint.distance(newBezierMidPoint);
+                }
+
+                return { C1, C2 };
+            }
+
+            function getInnerControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth)
+            {
+                let lineAd = lineA.clone(); // will move down
+
+                return { C1, C2 };
+            }
+
+            // Both the arguments and the returned string are absolute coordinates.
+            function getDStr(startPoint, outerCP1, outerCP2, endPoint, innerCP2, innerCP1)
+            {
+                const relX = startPoint.x,
+                    relY = startPoint.y;
+
+                let point1Str = getCoordinateString(startPoint),
+                    outerCP1Str = getCoordinateString(outerCP1),
+                    outerCP2Str = getCoordinateString(outerCP2),
+                    point2Str = getCoordinateString(endPoint),
+                    innerCP2Str = getCoordinateString(innerCP2),
+                    innerCP1Str = getCoordinateString(innerCP1),
+                    dStr;
+
+                dStr = "M" + point1Str + "C" + outerCP1Str + "," + outerCP2Str + "," + point2Str + "C" + innerCP2Str + "," + innerCP1Str + "," + point1Str + "z";
+
+                return dStr;
+            }
+
+            const endAngle = 5, // degrees
+                startPair = templatePointPairs.startPair,
+                endPair = templatePointPairs.endPair,
+                lineA = new Line(startPair.control, endPair.control),
+                startControlLine = new Line(startPair.point, startPair.control),
+                endControlLine = new Line(endPair.point, endPair.control),
+
+                lineC1outer = getAngledLine(startControlLine, -endAngle), // outer
+                lineC2outer = getAngledLine(endControlLine, endAngle), // outer
+
+                lineC1inner = getAngledLine(startControlLine, endAngle), // inner
+                lineC2inner = getAngledLine(endControlLine, -endAngle), // inner
+
+                templateMidPoint = getBezierMidPoint(startControlLine.point1, startControlLine.point2, endControlLine.point2, endControlLine.point1),
+
+                outer = getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth),
+                inner = getInnerControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth),
+
+                dStr = getDStr(startPair.point, outer.C1, outer.C2, endPair.point, inner.C2, inner.C1);
+
+            return dStr;
+
+        }
+
+        // Returns the string that is going to be the short slur's d-attribute.
+        function getShortSlurDStrOld(templatePointPairs, templateStrokeWidth)
         {
             // Both the arguments and the returned string are absolute coordinates.
             function getDStr(startPoint, upperCP1, upperCP2, endPoint, lowerCP2, lowerCP1)
