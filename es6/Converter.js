@@ -204,44 +204,58 @@ export class Converter
 
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
         {
-            function getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth)
+            function getControlPoints(lineA, startControlLine, endControlLine, c1ControlLine, c2ControlLine, templateMidPoint, templateStrokeWidth, outer)
             {
-                let lineAu = lineA.clone(), // will move up
+                let lineAu = lineA.clone(), // will move up or down
                     heightA = lineA.point2.y - lineA.point1.y,
                     widthA = lineA.point2.x - lineA.point1.x,
                     hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
                     cosA = widthA / hypA,
                     shiftDist = (templateStrokeWidth / cosA),
-                    shift = shiftDist * -1; // move up initially
+                    shift = (outer === true) ? shiftDist * -1 : shiftDist; // outer moves up initially
 
-                lineAu.move(0, shift); // move up
+                lineAu.move(0, shift); // move up or down
 
-                let C1 = lineAu.intersectionPoint(lineC1outer),
-                    C2 = lineAu.intersectionPoint(lineC2outer),
+                let C1 = lineAu.intersectionPoint(c1ControlLine),
+                    C2 = lineAu.intersectionPoint(c2ControlLine),
                     newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1),
-                    halfThickness = templateMidPoint.distance(newBezierMidPoint),
+                    distance = templateMidPoint.distance(newBezierMidPoint),
                     halfTemplateStrokeWidth = templateStrokeWidth / 2;
 
-                while(Math.abs(halfThickness - halfTemplateStrokeWidth) > 0.1)
+                while(Math.abs(distance - halfTemplateStrokeWidth) > 0.1)
                 {
                     shiftDist *= 0.5;
-                    shift = (halfThickness > halfTemplateStrokeWidth) ? shift = shiftDist : shift = shiftDist * -1;
+                    if(outer === true)
+                    {
+                        shift = (distance > halfTemplateStrokeWidth) ? shift = shiftDist : shift = shiftDist * -1;
+                    }
+                    else
+                    {
+                        shift = (distance > halfTemplateStrokeWidth) ? shift = shiftDist * -1 : shift = shiftDist;
+                    }
 
                     lineAu.move(0, shift);
-                    C1 = lineAu.intersectionPoint(lineC1outer);
-                    C2 = lineAu.intersectionPoint(lineC2outer);
+                    C1 = lineAu.intersectionPoint(c1ControlLine);
+                    C2 = lineAu.intersectionPoint(c2ControlLine);
                     newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1);
-                    halfThickness = templateMidPoint.distance(newBezierMidPoint);
+                    distance = templateMidPoint.distance(newBezierMidPoint);
                 }
 
                 return { C1, C2 };
             }
 
+            function getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth)
+            {
+                let controlPoints = getControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth, true)
+
+                return controlPoints;
+            }
+
             function getInnerControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth)
             {
-                let lineAd = lineA.clone(); // will move down
+                let controlPoints = getControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth, false)
 
-                return { C1, C2 };
+                return controlPoints;
             }
 
             // Both the arguments and the returned string are absolute coordinates.
