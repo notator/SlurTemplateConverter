@@ -222,6 +222,9 @@ export class Converter
                     distance = templateMidPoint.distance(newBezierMidPoint),
                     halfTemplateStrokeWidth = templateStrokeWidth / 2;
 
+                let direction = (shift < 0) ? "up" : "down";
+                console.log("outer=" + outer + " distance=" + distance.toString() + " direction=" + direction + " shift=" + shift);
+
                 while(Math.abs(distance - halfTemplateStrokeWidth) > 0.1)
                 {
                     shiftDist *= 0.5;
@@ -239,6 +242,9 @@ export class Converter
                     C2 = lineAu.intersectionPoint(c2ControlLine);
                     newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1);
                     distance = templateMidPoint.distance(newBezierMidPoint);
+
+                    direction = (shift < 0) ? "up" : "down";
+                    console.log("outer=" + outer + " distance=" + distance.toString() + " direction=" + direction + " shift=" + shift);
                 }
 
                 return { C1, C2 };
@@ -566,6 +572,8 @@ export class Converter
                 parentElement = slurTemplate.parentElement,
                 slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
                 dStr = "";
+
+            console.log("\n*** Template " + (i + 1).toString() + " ***");
 
             if(templatePointPairs.tangentPairs.length === 0)
             {
