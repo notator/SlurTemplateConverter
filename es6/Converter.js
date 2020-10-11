@@ -39,20 +39,6 @@ export class Converter
             return outPoint;
         }
 
-        // According to https://stackoverflow.com/questions/4089443/find-the-tangent-of-a-point-on-a-cubic-bezier-curve
-        // the derivative of a cubic Bezier curve with respect to t is
-        // 3((1-t)squared) * (c0 - p0) + 6((1-t)*t*(c0 - p1)) + 3((t)squared) * (p1 - c1))
-        // so, setting t to 0.5, this reduces to
-        // (0.75 * (c0 - p0)) +  (1.50 * (c0 - p1)) + (1.5 * (p1 - c1))
-        function getCosAngleAtBezierMidPoint(p0, c0, c1, p1)
-        {
-            let x = (0.75 * (c0.x - p0.x)) + (1.50 * (c0.x - p1.x)) + (1.5 * (p1.x - c1.x)),
-                y = (0.75 * (c0.y - p0.y)) + (1.50 * (c0.y - p1.y)) + (1.5 * (p1.y - c1.y)),
-                cosA = Math.cos(Math.atan(y / x)) ;
-
-            return cosA;
-        }
-
         function getTemplateStrokeWidth(slurTemplate)
         {
             let strokeWidthStr = slurTemplate.getAttribute('stroke-width');
@@ -233,7 +219,6 @@ export class Converter
                 let C1 = lineAu.intersectionPoint(c1ControlLine),
                     C2 = lineAu.intersectionPoint(c2ControlLine),
                     newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1),
-                    cosAngleAtBezierMidPoint = getCosAngleAtBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1),
                     distance = templateMidPoint.distance(newBezierMidPoint),
                     halfTemplateStrokeWidth = templateStrokeWidth / 2;
 
