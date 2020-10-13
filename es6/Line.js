@@ -14,9 +14,65 @@ export class Line
         return new Line(this.point1.clone(), this.point2.clone());
     }
 
+    slope()
+    {
+        let m = ((this.point2.y - this.point1.y) / (this.point2.x - this.point1.x));
+        return m;
+    }
+
+    midPoint()
+    {
+        return new Point(((this.point1.x + this.point2.x) / 2), ((this.point1.y + this.point2.y) / 2));
+    }
+
     // Moves this line's end-points by dx, dy.
     move(dx, dy)
     {
+        this.point1.move(dx, dy);
+        this.point2.move(dx, dy);
+    }
+
+    // Moves both end points by delta units, so that
+    // this line moves to a parallel line that is at
+    // a distance of delta units from the original position.
+    moveParallel(delta)
+    {
+        let slope = this.slope(),
+            radians = Math.atan(slope),
+            dx = -delta * Math.sin(radians),
+            dy = delta * Math.cos(radians);
+        
+        this.point1.move(dx, dy);
+        this.point2.move(dx, dy);
+    }
+
+    // Moves each end point of this line outwards by the same distance
+    // so that the length of the line increases by a total of deltaPercent
+    widen(deltaPercent)
+    {
+        let midPoint = this.midPoint(),
+            dx = this.point2.x - midPoint.x,
+            dy = this.point2.y - midPoint.y,
+            radians = Math.atan(dy / dx),
+            halfLength = Math.sqrt((dx * dx) + (dy * dy)),
+            factor = 1 + (deltaPercent / 100),
+            newHyp = halfLength * factor,
+            hypIncr = newHyp - halfLength,
+            xIncr = hypIncr * Math.cos(radians),
+            yIncr = hypIncr * Math.sin(radians);
+
+        this.point1.move(-xIncr, -yIncr);
+        this.point2.move(xIncr, yIncr);
+    }
+
+    // Moves both end points in parallel, so that this line passes through point.
+    // (Centres the line on the point.)
+    shiftToPoint(point)
+    {
+        let midPoint = this.midPoint(),
+            dx = point.x - midPoint.x,
+            dy = point.y - midPoint.y;
+
         this.point1.move(dx, dy);
         this.point2.move(dx, dy);
     }

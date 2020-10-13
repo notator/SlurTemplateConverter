@@ -17,28 +17,6 @@ export class Converter
     // class="slur" attribute. The "slur" CSS definition is expected to exist already in the svg. 
     convertSlurTemplates(svg) 
     {
-        // Adapted from the cubicBezier function in https://github.com/bit101/CodingMath/blob/master/episode19/utils.js
-        // Found via https://www.youtube.com/watch?v=dXECQRlmIaE.
-        // Properly understood having watched https://www.youtube.com/watch?v=A8CM297pq2Y&list=WL&index=2
-        // function getCubicBezierPoint(p0, c0, c1, p1, t, outPoint)
-        // {
-        //     outPoint = outPoint || {};
-        //     outPoint.x = (Math.pow(1 - t, 3) * p0.x) + (Math.pow(1 - t, 2) * 3 * t * c0.x) + ((1 - t) * 3 * t * t * c1.x) + (t * t * t * p1.x);
-        //     outPoint.y = (Math.pow(1 - t, 3) * p0.y) + (Math.pow(1 - t, 2) * 3 * t * c0.y) + ((1 - t) * 3 * t * t * c1.y) + (t * t * t * p1.y);
-        //     return outPoint;
-        // }
-        // This is the above function with t set to 0.5
-        function getBezierMidPoint(p0, c0, c1, p1)
-        {
-            let coeff1 = 0.125,
-                coeff2 = 0.375,
-                x = (coeff1 * p0.x) + (coeff2 * c0.x) + (coeff2 * c1.x) + (coeff1 * p1.x),
-                y = (coeff1 * p0.y) + (coeff2 * c0.y) + (coeff2 * c1.y) + (coeff1 * p1.y),
-                outPoint = new Point(x,y);
-
-            return outPoint;
-        }
-
         function getTemplateStrokeWidth(slurTemplate)
         {
             let strokeWidthStr = slurTemplate.getAttribute('stroke-width');
@@ -202,64 +180,75 @@ export class Converter
             return xStr + "," + yStr;
         }
 
+        // Returns the string that is going to be the short slur's d-attribute.
         function getShortSlurDStr(templatePointPairs, templateStrokeWidth)
         {
-            function getControlPoints(lineA, startControlLine, endControlLine, c1ControlLine, c2ControlLine, templateMidPoint, templateStrokeWidth, outer)
+            function getTQPoints(tp0, tp1, tp2, tp3)
             {
-                let lineAu = lineA.clone(), // will move up or down
-                    heightA = lineA.point2.y - lineA.point1.y,
-                    widthA = lineA.point2.x - lineA.point1.x,
-                    hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-                    cosA = widthA / hypA,
-                    shiftDist = (templateStrokeWidth / cosA),
-                    shift = (outer === true) ? shiftDist * -1 : shiftDist; // outer moves up initially
+                let tq0 = new Point((tp0.x + tp1.x) / 2, (tp0.y + tp1.y) / 2),
+                    tq1 = new Point((tp1.x + tp2.x) / 2, (tp1.y + tp2.y) / 2),
+                    tq2 = new Point((tp2.x + tp3.x) / 2, (tp2.y + tp3.y) / 2);
 
-                lineAu.move(0, shift); // move up or down
-
-                let C1 = lineAu.intersectionPoint(c1ControlLine),
-                    C2 = lineAu.intersectionPoint(c2ControlLine),
-                    newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1),
-                    distance = templateMidPoint.distance(newBezierMidPoint),
-                    halfTemplateStrokeWidth = templateStrokeWidth / 2;
-
-                let direction = (shift < 0) ? "up" : "down";
-                console.log("outer=" + outer + " distance=" + distance.toString() + " direction=" + direction + " shift=" + shift);
-
-                while(Math.abs(distance - halfTemplateStrokeWidth) > 0.1)
-                {
-                    shiftDist *= 0.5;
-                    if(outer === true)
-                    {
-                        shift = (distance > halfTemplateStrokeWidth) ? shift = shiftDist : shift = shiftDist * -1;
-                    }
-                    else
-                    {
-                        shift = (distance > halfTemplateStrokeWidth) ? shift = shiftDist * -1 : shift = shiftDist;
-                    }
-
-                    lineAu.move(0, shift);
-                    C1 = lineAu.intersectionPoint(c1ControlLine);
-                    C2 = lineAu.intersectionPoint(c2ControlLine);
-                    newBezierMidPoint = getBezierMidPoint(startControlLine.point1, C1, C2, endControlLine.point1);
-                    distance = templateMidPoint.distance(newBezierMidPoint);
-
-                    direction = (shift < 0) ? "up" : "down";
-                    console.log("outer=" + outer + " distance=" + distance.toString() + " direction=" + direction + " shift=" + shift);
-                }
-
-                return { C1, C2 };
+                return { tq0, tq1, tq2 };
             }
 
-            function getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth)
+            function getTRPoints(tqPoints)
             {
-                let controlPoints = getControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth, true)
+                let tq0 = tqPoints.tq0,
+                    tq1 = tqPoints.tq1,
+                    tq2 = tqPoints.tq2,
+                    tr0 = new Point((tq0.x + tq1.x) / 2, (tq0.y + tq1.y) / 2),
+                    tr1 = new Point((tq1.x + tq2.x) / 2, (tq1.y + tq2.y) / 2);
+
+                return { tr0, tr1 };
+            }
+
+            function getTBezierLines(tqPoints, trPoints)
+            {
+                let tqLine0 = new Line(tqPoints.tq0, tqPoints.tq1),
+                    tqLine1 = new Line(tqPoints.tq1, tqPoints.tq2),
+                    trLine = new Line(trPoints.tr0, trPoints.tr1);
+                
+                return { tqLine0, tqLine1, trLine }; 
+            }
+
+            function getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, isOuter)
+            {
+                const halfTemplateStrokeWidth = templateStrokeWidth / 2,
+                    deltaPercent = (isOuter === true) ? 3 : -3;                
+
+                let pLine1 = new Line(tp1, tp2),
+                    qLine0 = tBezierLines.tqLine0.clone(),
+                    qLine1 = tBezierLines.tqLine1.clone(),
+                    rLine = tBezierLines.trLine.clone(),
+                    isUpper, crab, q1, p1, p2;
+
+                isUpper = ((isOuter === true && tBezierLines.tqLine0.slope() < 0) || (isOuter === false && tBezierLines.tqLine0.slope() > 0));
+                crab = (isUpper === true) ? -halfTemplateStrokeWidth : halfTemplateStrokeWidth;
+                
+                rLine.moveParallel(crab);
+                rLine.widen(deltaPercent);
+                qLine0.shiftToPoint(rLine.point1);
+                qLine1.shiftToPoint(rLine.point2);
+                q1 = qLine0.intersectionPoint(qLine1);
+                pLine1.shiftToPoint(q1);
+                pLine1.widen(deltaPercent);
+                p1 = pLine1.point1;
+                p2 = pLine1.point2;                
+
+                return { p1, p2 };
+            }
+
+            function getOuterControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth)
+            {
+                let controlPoints = getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, true);
 
                 return controlPoints;
             }
 
-            function getInnerControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth)
+            function getInnerControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth)
             {
-                let controlPoints = getControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth, false)
+                let controlPoints = getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, false)
 
                 return controlPoints;
             }
@@ -283,90 +272,20 @@ export class Converter
                 return dStr;
             }
 
-            const endAngle = 5, // degrees
-                startPair = templatePointPairs.startPair,
-                endPair = templatePointPairs.endPair,
-                lineA = new Line(startPair.control, endPair.control),
-                startControlLine = new Line(startPair.point, startPair.control),
-                endControlLine = new Line(endPair.point, endPair.control),
+            const tp0 = templatePointPairs.startPair.point,
+                tp1 = templatePointPairs.startPair.control,
+                tp2 = templatePointPairs.endPair.control,
+                tp3 = templatePointPairs.endPair.point,
+                tqPoints = getTQPoints(tp0, tp1, tp2, tp3),
+                trPoints = getTRPoints(tqPoints),
+                tBezierLines = getTBezierLines(tqPoints, trPoints),
+                outer = getOuterControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth),
+                inner = getInnerControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth),
 
-                lineC1outer = getAngledLine(startControlLine, -endAngle), // outer
-                lineC2outer = getAngledLine(endControlLine, endAngle), // outer
-
-                lineC1inner = getAngledLine(startControlLine, endAngle), // inner
-                lineC2inner = getAngledLine(endControlLine, -endAngle), // inner
-
-                templateMidPoint = getBezierMidPoint(startControlLine.point1, startControlLine.point2, endControlLine.point2, endControlLine.point1),
-
-                outer = getOuterControlPoints(lineA, startControlLine, endControlLine, lineC1outer, lineC2outer, templateMidPoint, templateStrokeWidth),
-                inner = getInnerControlPoints(lineA, startControlLine, endControlLine, lineC1inner, lineC2inner, templateMidPoint, templateStrokeWidth),
-
-                dStr = getDStr(startPair.point, outer.C1, outer.C2, endPair.point, inner.C2, inner.C1);
+                dStr = getDStr(tp0, outer.p1, outer.p2, tp3, inner.p2, inner.p1);
 
             return dStr;
 
-        }
-
-        // Returns the string that is going to be the short slur's d-attribute.
-        function getShortSlurDStrOld(templatePointPairs, templateStrokeWidth)
-        {
-            // Both the arguments and the returned string are absolute coordinates.
-            function getDStr(startPoint, upperCP1, upperCP2, endPoint, lowerCP2, lowerCP1)
-            {
-                const relX = startPoint.x,
-                    relY = startPoint.y;
-
-                let point1Str = getCoordinateString(startPoint),
-                    upperCP1Str = getCoordinateString(upperCP1),
-                    upperCP2Str = getCoordinateString(upperCP2),
-                    point2Str = getCoordinateString(endPoint),
-                    lowerCP2Str = getCoordinateString(lowerCP2),
-                    lowerCP1Str = getCoordinateString(lowerCP1),
-                    dStr;
-
-                dStr = "M" + point1Str + "C" + upperCP1Str + "," + upperCP2Str + "," + point2Str + "C" + lowerCP2Str + "," + lowerCP1Str + "," + point1Str + "z";
-
-                return dStr;
-            }
-
-            const endAngle = 5, // degrees
-                startPair = templatePointPairs.startPair,
-                endPair = templatePointPairs.endPair,
-                lineA = new Line(startPair.control, endPair.control),
-                heightA = lineA.point2.y - lineA.point1.y,
-                widthA = lineA.point2.x - lineA.point1.x,
-                hypA = Math.sqrt((widthA * widthA) + (heightA * heightA)),
-                cosA = widthA / hypA,
-                startControlLine = new Line(startPair.point, startPair.control),
-                endControlLine = new Line(endPair.point, endPair.control),
-
-                lineC = getAngledLine(startControlLine, -endAngle),
-                lineD = getAngledLine(startControlLine, endAngle),
-                lineE = getAngledLine(endControlLine, -endAngle),
-                lineF = getAngledLine(endControlLine, endAngle);
-
-            let lineB = lineA.clone(),
-                lineK = lineA.clone(),
-                yShift = ((templateStrokeWidth * 0.5) / cosA); // cosA cannot be 0 (see template conditions in getTemplatePoints() above).
-
-            // make slurs that change direction thinner.
-            if(((startPair.point.y < startPair.control.y) && (endPair.point.y > endPair.control.y))
-            || ((startPair.point.y > startPair.control.y) && (endPair.point.y < endPair.control.y)))
-            {
-                // the slur changes direction
-                yShift *= 0.4; 
-            }
-
-            lineB.move(0, -yShift);
-            lineK.move(0, yShift);
-
-            const upperCP1 = lineB.intersectionPoint(lineC),
-                upperCP2 = lineB.intersectionPoint(lineF),
-                lowerCP1 = lineK.intersectionPoint(lineD),
-                lowerCP2 = lineK.intersectionPoint(lineE),
-                dStr = getDStr(startPair.point, upperCP1, upperCP2, endPair.point, lowerCP2, lowerCP1);
-
-            return dStr;
         }
 
         // Returns the string that is going to be the long slur's d-attribute.
