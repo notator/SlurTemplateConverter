@@ -20,11 +20,11 @@ export class Point
         this.y += dy;
     }
 
-    // The distance between this point and point2
-    distance(point2)
+    // The distance between this point and point1
+    distance(point1)
     {
-        let dx = point2.x - this.x,
-            dy = point2.y - this.y,
+        let dx = point1.x - this.x,
+            dy = point1.y - this.y,
             distance = Math.sqrt((dx * dx) + (dy * dy));
 
         return distance;

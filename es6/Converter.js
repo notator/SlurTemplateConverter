@@ -163,10 +163,10 @@ export class Converter
 
         function getAngledLine(controlLine, angle)
         {
-            let point = controlLine.point2.clone();
-            point.rotate(controlLine.point1, angle);
+            let point = controlLine.point1.clone();
+            point.rotate(controlLine.point0, angle);
 
-            return new Line(controlLine.point1, point);
+            return new Line(controlLine.point0, point);
         }
 
         function getCoordinateString(point)
@@ -203,54 +203,72 @@ export class Converter
                 return { tr0, tr1 };
             }
 
-            function getTBezierLines(tqPoints, trPoints)
+            function getTBezierLines(tp0, tp1, tp2, tp3, tqPoints, trPoints)
             {
-                let tqLine0 = new Line(tqPoints.tq0, tqPoints.tq1),
+                let tpLine0 = new Line(tp0, tp1),
+                    tpLine1 = new Line(tp1, tp2),
+                    tpLine2 = new Line(tp2, tp3),
+                    tqLine0 = new Line(tqPoints.tq0, tqPoints.tq1),
                     tqLine1 = new Line(tqPoints.tq1, tqPoints.tq2),
                     trLine = new Line(trPoints.tr0, trPoints.tr1);
                 
-                return { tqLine0, tqLine1, trLine }; 
+                return { tpLine0, tpLine1, tpLine2, tqLine0, tqLine1, trLine }; 
             }
 
-            function getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, isOuter)
+            function getControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth, isUpper)
             {
-                const halfTemplateStrokeWidth = templateStrokeWidth / 2,
-                    deltaPercent = (isOuter === true) ? 3 : -3;                
+                const halfTemplateStrokeWidth = templateStrokeWidth / 2;    
 
-                let pLine1 = new Line(tp1, tp2),
+                let rLine = tBezierLines.trLine.clone(),
                     qLine0 = tBezierLines.tqLine0.clone(),
                     qLine1 = tBezierLines.tqLine1.clone(),
-                    rLine = tBezierLines.trLine.clone(),
-                    isUpper, crab, q1, p1, p2;
+                    controlPointsLine = tBezierLines.tpLine1.clone(),                    
+                    q1;
 
-                isUpper = ((isOuter === true && tBezierLines.tqLine0.slope() < 0) || (isOuter === false && tBezierLines.tqLine0.slope() > 0));
-                crab = (isUpper === true) ? -halfTemplateStrokeWidth : halfTemplateStrokeWidth;
-                
-                rLine.moveParallel(crab);
-                rLine.widen(deltaPercent);
-                qLine0.shiftToPoint(rLine.point1);
-                qLine1.shiftToPoint(rLine.point2);
+                rLine.moveParallel((isUpper === true) ? -halfTemplateStrokeWidth : halfTemplateStrokeWidth);
+                qLine0.shiftToPoint(rLine.point0);
+                qLine1.shiftToPoint(rLine.point1);
                 q1 = qLine0.intersectionPoint(qLine1);
-                pLine1.shiftToPoint(q1);
-                pLine1.widen(deltaPercent);
-                p1 = pLine1.point1;
-                p2 = pLine1.point2;                
 
-                return { p1, p2 };
+                controlPointsLine.shiftToPoint(q1);                
+
+                return controlPointsLine;
             }
 
-            function getOuterControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth)
+            function getUpperControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth)
             {
-                let controlPoints = getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, true);
+                let upperControlPointsLine = getControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth, true);
 
-                return controlPoints;
+                return upperControlPointsLine;
             }
 
-            function getInnerControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth)
+            function getLowerControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth)
             {
-                let controlPoints = getControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth, false)
+                let lowerControlPointsLine = getControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth, false)
 
-                return controlPoints;
+                return lowerControlPointsLine;
+            }
+
+            function getControlPoints(tBezierLines, tp1, tp2, upperControlPointsLine, lowerControlPointsLine)
+            {
+                let tpLine0 = tBezierLines.tpLine0, // points p0, p1 in that order (clockwise)
+                    tpLine2 = tBezierLines.tpLine2, // points p2, p3 in that order (clockwise)
+                    isOver = ((tpLine0.point0.y > tpLine0.point1.y) && (tpLine2.point0.y < tpLine2.point1.y)),
+                    tRadians = ((tp2.x - tp1.x) === 0) ? Math.PI / 2 : Math.atan((tp2.y - tp1.y) / (tp2.x - tp1.x)),
+                    radiansLeft = (isOver === true) ? tRadians + Math.PI / 4 : tRadians - Math.PI / 4,
+                    radiansRight = (isOver === true) ? tRadians - Math.PI / 4 : tRadians + Math.PI / 4,
+                    leftIntersectorLine = new Line(tp1, new Point(tp1.x + (100 * Math.cos(radiansLeft)), tp1.y + (100 * Math.sin(radiansLeft)))),
+                    rightIntersectorLine = new Line(tp2, new Point(tp2.x + (100 * Math.cos(radiansRight)), tp2.y + (100 * Math.sin(radiansRight)))),
+                    upper = {},
+                    lower = {};
+
+                upper.p1 = upperControlPointsLine.intersectionPoint(leftIntersectorLine);
+                upper.p2 = upperControlPointsLine.intersectionPoint(rightIntersectorLine);
+
+                lower.p1 = lowerControlPointsLine.intersectionPoint(leftIntersectorLine);
+                lower.p2 = lowerControlPointsLine.intersectionPoint(rightIntersectorLine);
+
+                return { upper, lower };
             }
 
             // Both the arguments and the returned string are absolute coordinates.
@@ -278,11 +296,12 @@ export class Converter
                 tp3 = templatePointPairs.endPair.point,
                 tqPoints = getTQPoints(tp0, tp1, tp2, tp3),
                 trPoints = getTRPoints(tqPoints),
-                tBezierLines = getTBezierLines(tqPoints, trPoints),
-                outer = getOuterControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth),
-                inner = getInnerControlPoints(tp1, tp2, tBezierLines, templateStrokeWidth),
+                tBezierLines = getTBezierLines(tp0, tp1, tp2, tp3, tqPoints, trPoints),
+                upperControlPointsLine = getUpperControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth),
+                lowerControlPointsLine = getLowerControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth),
+                controlPoints = getControlPoints(tBezierLines, tp1, tp2, upperControlPointsLine, lowerControlPointsLine),
 
-                dStr = getDStr(tp0, outer.p1, outer.p2, tp3, inner.p2, inner.p1);
+                dStr = getDStr(tp0, controlPoints.upper.p1, controlPoints.upper.p2, tp3, controlPoints.lower.p2, controlPoints.lower.p1);
 
             return dStr;
 

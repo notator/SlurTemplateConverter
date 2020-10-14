@@ -3,33 +3,33 @@ import { Point } from "./Point.js";
 
 export class Line
 {
-    constructor(point1, point2)
+    constructor(point0, point1)
 	{
+        this.point0 = new Point(point0.x, point0.y);
         this.point1 = new Point(point1.x, point1.y);
-        this.point2 = new Point(point2.x, point2.y);
     }
 
     clone()
     {
-        return new Line(this.point1.clone(), this.point2.clone());
+        return new Line(this.point0.clone(), this.point1.clone());
     }
 
     slope()
     {
-        let m = ((this.point2.y - this.point1.y) / (this.point2.x - this.point1.x));
+        let m = ((this.point1.y - this.point0.y) / (this.point1.x - this.point0.x));
         return m;
     }
 
     midPoint()
     {
-        return new Point(((this.point1.x + this.point2.x) / 2), ((this.point1.y + this.point2.y) / 2));
+        return new Point(((this.point0.x + this.point1.x) / 2), ((this.point0.y + this.point1.y) / 2));
     }
 
     // Moves this line's end-points by dx, dy.
     move(dx, dy)
     {
+        this.point0.move(dx, dy);
         this.point1.move(dx, dy);
-        this.point2.move(dx, dy);
     }
 
     // Moves both end points by delta units, so that
@@ -42,27 +42,8 @@ export class Line
             dx = -delta * Math.sin(radians),
             dy = delta * Math.cos(radians);
         
+        this.point0.move(dx, dy);
         this.point1.move(dx, dy);
-        this.point2.move(dx, dy);
-    }
-
-    // Moves each end point of this line outwards by the same distance
-    // so that the length of the line increases by a total of deltaPercent
-    widen(deltaPercent)
-    {
-        let midPoint = this.midPoint(),
-            dx = this.point2.x - midPoint.x,
-            dy = this.point2.y - midPoint.y,
-            radians = Math.atan(dy / dx),
-            halfLength = Math.sqrt((dx * dx) + (dy * dy)),
-            factor = 1 + (deltaPercent / 100),
-            newHyp = halfLength * factor,
-            hypIncr = newHyp - halfLength,
-            xIncr = hypIncr * Math.cos(radians),
-            yIncr = hypIncr * Math.sin(radians);
-
-        this.point1.move(-xIncr, -yIncr);
-        this.point2.move(xIncr, yIncr);
     }
 
     // Moves both end points in parallel, so that this line passes through point.
@@ -73,8 +54,8 @@ export class Line
             dx = point.x - midPoint.x,
             dy = point.y - midPoint.y;
 
+        this.point0.move(dx, dy);
         this.point1.move(dx, dy);
-        this.point2.move(dx, dy);
     }
 
     // Returns the intersection point between this line and line2.
@@ -96,10 +77,10 @@ export class Line
     //             y = (a1c2 - a2c1) / (a1b2 – a2b1)    
     intersectionPoint(line2)
     {
-        let pA = this.point1,
-            pB = this.point2,
-            pC = line2.point1,
-            pD = line2.point2,
+        let pA = this.point0,
+            pB = this.point1,
+            pC = line2.point0,
+            pD = line2.point1,
             // Line AB is a1x + b1y = c1  
             a1 = pB.y - pA.y,
             b1 = pA.x - pB.x,
