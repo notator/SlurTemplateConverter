@@ -253,14 +253,17 @@ export class Converter
             {
                 let tpLine0 = tBezierLines.tpLine0, // points p0, p1 in that order (clockwise)
                     tpLine2 = tBezierLines.tpLine2, // points p2, p3 in that order (clockwise)
-                    isOver = ((tpLine0.point0.y > tpLine0.point1.y) && (tpLine2.point0.y < tpLine2.point1.y)),
+                    isOver = (tpLine0.point0.y > tpLine0.point1.y), // the template starts sloping upwards
                     tRadians = ((tp2.x - tp1.x) === 0) ? Math.PI / 2 : Math.atan((tp2.y - tp1.y) / (tp2.x - tp1.x)),
                     radiansLeft = (isOver === true) ? tRadians + Math.PI / 4 : tRadians - Math.PI / 4,
                     radiansRight = (isOver === true) ? tRadians - Math.PI / 4 : tRadians + Math.PI / 4,
                     leftIntersectorLine = new Line(tp1, new Point(tp1.x + (100 * Math.cos(radiansLeft)), tp1.y + (100 * Math.sin(radiansLeft)))),
-                    rightIntersectorLine = new Line(tp2, new Point(tp2.x + (100 * Math.cos(radiansRight)), tp2.y + (100 * Math.sin(radiansRight)))),
+                    isS_Template = ((tpLine0.point0.y > tpLine0.point1.y) === (tpLine2.point0.y > tpLine2.point1.y)),
+                    radians = (isS_Template) ? radiansLeft : radiansRight,
+                    rightIntersectorLine = new Line(tp2, new Point(tp2.x + (100 * Math.cos(radians)), tp2.y + (100 * Math.sin(radians)))),
                     upper = {},
                     lower = {};
+
 
                 upper.p1 = upperControlPointsLine.intersectionPoint(leftIntersectorLine);
                 upper.p2 = upperControlPointsLine.intersectionPoint(rightIntersectorLine);
