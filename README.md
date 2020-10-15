@@ -1,9 +1,9 @@
 # SlurTemplateConverter
 This web application converts slur templates in SVG files to proper, pointed slurs.<br /><br />
 For example, these slur templates<br />
-<img src="readmeSlurTemplates.png" /><br/>
+<img src="readmeSlurTemplates1.png" /><br/>
 are converted to the following slurs:<br />
-<img src="readmeSlurs.png" /><br/>
+<img src="readmeSlurs1.png" /><br/>
 Usage:<br />
 1. Load the application by visiting https://james-ingram-act-two.de/open-source/SlurTemplateConverter/
 2. Load a local SVG file by clicking the button provided.
