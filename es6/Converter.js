@@ -514,7 +514,7 @@ export class Converter
                 slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
                 dStr = "";
 
-            console.log("\n*** Template " + (i + 1).toString() + " ***");
+            //console.log("\n*** Template " + (i + 1).toString() + " ***");
 
             if(templatePointPairs.tangentPairs.length === 0)
             {
@@ -526,8 +526,8 @@ export class Converter
                 dStr = getLongSlurDStr(templatePointPairs, templateStrokeWidth);
             }
 
-            slur.setAttribute('d', dStr);
             slur.setAttribute('class', 'slur');
+            slur.setAttribute('d', dStr);
 
             parentElement.insertBefore(slur, slurTemplate);
         }
