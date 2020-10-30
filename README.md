@@ -15,7 +15,8 @@ Details:<br />
 - A slur template is an SVG path element having class "slurTemplate".
 - A slur is an SVG path element having class "slur".
 - Each slur is created next to the slur template it replaces, before the template is deleted.
-- Both the "slur" and "slurTemplate" classes must exist in the SVG's CSS styles. They are used but not created by this application.
+- The "slur" class must already exist in the SVG's CSS styles.
+- The CSS style info for templates is written locally into each template path, so is deleted with the template.
 The slurTemplate's stroke-width affects the maximum thickness of the created slur. It is typically set to (Gap/2)px, where Gap is the vertical distance between two stafflines.
 - Both the "slur" and the "slurTemplate" use absolute coordinates in the SVG path (i.e. M, C and S, not m, c, and s.)
 
