@@ -15,7 +15,7 @@ export class Converter
     // The path.d string must contain absolute coordinates (i.e. use 'C' and 'S', not 'c' and 's').
     // The slur replaces the slurTemplate at the same position in the svg, and is styled by being given a
     // class="slur" attribute. The "slur" CSS definition is expected to exist already in the svg. 
-    convertSlurTemplates(svg) 
+    convertTemplates(svg) 
     {
         function getTemplateStrokeWidth(slurTemplate)
         {
@@ -503,12 +503,9 @@ export class Converter
             return dStr;
         }
 
-        var slurTemplates = svg.getElementsByClassName("slurTemplate");
-
-        for(let i = 0; i < slurTemplates.length; ++i)
+        function convertSlurTemplate(slurTemplate)
         {
-            let slurTemplate = slurTemplates[i],
-                templateStrokeWidth = getTemplateStrokeWidth(slurTemplate),
+            let templateStrokeWidth = getTemplateStrokeWidth(slurTemplate),
                 templatePointPairs = getTemplatePointPairs(slurTemplate),
                 parentElement = slurTemplate.parentElement,
                 slur = document.createElementNS("http://www.w3.org/2000/svg", "path"),
@@ -530,6 +527,13 @@ export class Converter
             slur.setAttribute('d', dStr);
 
             parentElement.insertBefore(slur, slurTemplate);
+        }
+
+        var slurTemplates = svg.getElementsByClassName("slurTemplate");
+
+        for(let i = 0; i < slurTemplates.length; ++i)
+        {
+            convertSlurTemplate(slurTemplates[i]);
         }
 
         for(let i = slurTemplates.length - 1; i >= 0; --i)

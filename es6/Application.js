@@ -26,7 +26,7 @@ export class Application
             svg = iFrame.contentDocument,
             converter = new Converter();
 
-        svg = converter.convertSlurTemplates(svg);
+        svg = converter.convertTemplates(svg);
 
         let button = document.getElementById("convertButton");
         button.value = "Done";
