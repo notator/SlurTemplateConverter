@@ -396,7 +396,15 @@ export class Converter
                         return shiftedTangentPointTriples;
                     }
 
-                    function rotateEndControls(pointTuples)
+                    function shiftTieEndControls(pointTuples, shift)
+                    {
+                        pointTuples[0].control.x -= shift;
+                        pointTuples[0].control.y += shift;
+                        pointTuples[2].control.x += shift;
+                        pointTuples[2].control.y += shift;
+                    }
+
+                    function rotateSlurEndControls(pointTuples)
                     {
                         const angle = 5;
 
@@ -412,7 +420,7 @@ export class Converter
                     }
 
                     // returns a pointPair sequence that includes the start and end points.
-                    function getUpperPointsSequence(templatePointPairs, shiftUp)
+                    function getUpperPointsSequence(templatePointPairs, shiftUp, isTie)
                     {
                         // move the tangent points and control points outwards
                         let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, shiftUp);
@@ -420,13 +428,20 @@ export class Converter
                         upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
                         upperPointTuples.push(pairClone(templatePointPairs.endPair));
 
-                        rotateEndControls(upperPointTuples);
+                        if(isTie === true)
+                        {
+                            shiftTieEndControls(upperPointTuples, shiftUp);
+                        }
+                        else
+                        {
+                            rotateSlurEndControls(upperPointTuples);
+                        }
 
                         return upperPointTuples;
                     }
 
                     // returns a reversed pointPair sequence that includes the start and end points.
-                    function getLowerPointsSequence(templatePointPairs, shiftDown)
+                    function getLowerPointsSequence(templatePointPairs, shiftDown, isTie)
                     {
                         function reverse(pointTuples)
                         {
@@ -454,7 +469,14 @@ export class Converter
                         lowerPointTuples.splice(0, 0, pairClone(templatePointPairs.endPair));
                         lowerPointTuples.push(pairClone(templatePointPairs.startPair));
 
-                        rotateEndControls(lowerPointTuples);
+                        if(isTie === true)
+                        {
+                            shiftTieEndControls(lowerPointTuples, shiftDown);
+                        }
+                        else
+                        {
+                            rotateSlurEndControls(lowerPointTuples);
+                        }
 
                         return lowerPointTuples;
                     }
@@ -503,8 +525,8 @@ export class Converter
                     }
 
                     let halfLongSlurWidth = templateStrokeWidth * 0.4,
-                        upperPointTuples = getUpperPointsSequence(templatePointPairs, -halfLongSlurWidth),
-                        lowerPointTuples = getLowerPointsSequence(templatePointPairs, halfLongSlurWidth),
+                        upperPointTuples = getUpperPointsSequence(templatePointPairs, -halfLongSlurWidth, true),
+                        lowerPointTuples = getLowerPointsSequence(templatePointPairs, halfLongSlurWidth, true),
                         dStr = getDStr(upperPointTuples, lowerPointTuples);
 
                     return dStr;
@@ -532,7 +554,7 @@ export class Converter
                         p3.y = p2.y;
                     }
                     else // three points with three control points
-                    {                     
+                    {
                         // p1.x, p1.y, tp.y and p4x are constant
                         // tp.y defines the height of the tie
                         tp = templatePointPairs.tangentPairs[0].point;
