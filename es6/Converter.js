@@ -41,11 +41,11 @@ export class Converter
                 // Returns an object having the following attributes:
                 //    .startPair
                 //    .endPair
-                //    .tangentPairs[]
+                //    .tangentPair
                 // Each Pair is an object having two Points: point and control.
                 // For example:
                 //     templatePointPairs.startPair.point
-                //     templatePointPairs.tangentPairs[0].control
+                //     templatePointPairs.tangentPair.control
                 //     etc.
                 // All Points have absolute coordinates.
                 function getTemplatePointPairs(slurTemplate)
@@ -138,13 +138,11 @@ export class Converter
                         pointPairs.endPair.point = points[points.length - 1];
                         pointPairs.endPair.control = points[points.length - 2];
 
-                        pointPairs.tangentPairs = [];
-                        for(let i = 2; i < points.length - 2; i += 2)
+                        if(points.length === 6)
                         {
-                            let tangentPair = {};
-                            tangentPair.control = points[i];
-                            tangentPair.point = points[i + 1];
-                            pointPairs.tangentPairs.push(tangentPair);
+                            pointPairs.tangentPair = {};
+                            pointPairs.tangentPair.control = points[2];
+                            pointPairs.tangentPair.point = points[3];
                         }
 
                         return pointPairs;
@@ -328,36 +326,27 @@ export class Converter
                         return { point: pointClone, control: controlClone };
                     }
 
-                    // Returns tangent point triples of the form {point, controlIn, controlOut}.
-                    // Algorithm: For each tangentPair
-                    // 1. clone it, and shift the clone by shift units at right angles to itself.
+                    // Returns a tangent point triple object having point, controlIn, and controlOut members.
+                    // Algorithm:
+                    // 1. clone the tangentPair, and shift the clone by shift units at right angles to itself.
                     // 2. create the triple, setting 
                     //        triple.point = clone.point
                     //        triple.controlIn = clone.control
                     //        triple.controlOut = the mirror of triple.controlIn about triple.point
-                    function getShiftedTangentPointTriples(tangentPairs, shift)
+                    function getShiftedTangentPointTriple(tangentPair, shift)
                     {
-                        function shiftPoints(tangentPairsClone, shift)
+                        function shiftPoints(pointsPair, shift)
                         {
-                            for(let i = 0; i < tangentPairsClone.length; ++i)
-                            {
-
-                                let cPoint = tangentPairsClone[i].control,
-                                    pPoint = tangentPairsClone[i].point,
-                                    dx = pPoint.x - cPoint.x,
-                                    dy = pPoint.y - cPoint.y,
-                                    h = Math.sqrt((dx * dx) + (dy * dy)),
-                                    factor = shift / h,
-                                    xShift = (dy * factor) * -1,
-                                    yShift = dx * factor;
+                            let cPoint = pointsPair.control,
+                                pPoint = pointsPair.point,
+                                xShift = 0,
+                                yShift = shift;
 
                                 cPoint.move(xShift, yShift);
                                 pPoint.move(xShift, yShift);
-                            }
-
                         }
 
-                        function getTangentPointTriples(tangentPairsClone)
+                        function getTangentPointTriple(tangentPair)
                         {
                             function newMirrorControlPoint(point, controlIn)
                             {
@@ -368,32 +357,21 @@ export class Converter
                                 return controlOut;
                             }
 
-                            let tangentPointTriples = []
-                            for(let i = 0; i < tangentPairsClone.length; ++i)
-                            {
-                                let tangentPair = tangentPairsClone[i],
-                                    triple = {};
-                                triple.point = tangentPair.point;
-                                triple.controlIn = tangentPair.control;
-                                triple.controlOut = newMirrorControlPoint(triple.point, triple.controlIn);
+                            let tangentPointTriple = {};
+                            tangentPointTriple.point = tangentPair.point;
+                            tangentPointTriple.controlIn = tangentPair.control;
+                            tangentPointTriple.controlOut = newMirrorControlPoint(tangentPair.point, tangentPair.control);
 
-                                tangentPointTriples.push(triple);
-                            }
-
-                            return tangentPointTriples;
+                            return tangentPointTriple;
                         }
 
-                        let tangentPairsClone = [];
-                        for(let i = 0; i < tangentPairs.length; ++i)
-                        {
-                            tangentPairsClone.push(pairClone(tangentPairs[i]));
-                        }
+                        let tangentPairClone = pairClone(tangentPair);
 
-                        shiftPoints(tangentPairsClone, shift);
+                        shiftPoints(tangentPairClone, shift);
 
-                        let shiftedTangentPointTriples = getTangentPointTriples(tangentPairsClone);
+                        let shiftedTangentPointTriple = getTangentPointTriple(tangentPairClone);
 
-                        return shiftedTangentPointTriples;
+                        return shiftedTangentPointTriple;
                     }
 
                     function shiftTieEndControls(pointTuples, shift)
@@ -421,11 +399,12 @@ export class Converter
 
                     // returns a pointPair sequence that includes the start and end points.
                     function getUpperPointsSequence(templatePointPairs, shiftUp, isTie)
-                    {
-                        // move the tangent points and control points outwards
-                        let upperPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, shiftUp);
+                    {                        
+                        let upperPointTuples = [],
+                            tangentPointTriple = getShiftedTangentPointTriple(templatePointPairs.tangentPair, shiftUp);
 
-                        upperPointTuples.splice(0, 0, pairClone(templatePointPairs.startPair));
+                        upperPointTuples.push(pairClone(templatePointPairs.startPair));
+                        upperPointTuples.push(tangentPointTriple);
                         upperPointTuples.push(pairClone(templatePointPairs.endPair));
 
                         if(isTie === true)
@@ -443,30 +422,24 @@ export class Converter
                     // returns a reversed pointPair sequence that includes the start and end points.
                     function getLowerPointsSequence(templatePointPairs, shiftDown, isTie)
                     {
-                        function reverse(pointTuples)
+                        function reverse(tangentPointTriple)
                         {
-                            let reversedTuples = [];
+                            let temp = tangentPointTriple.controlIn;
 
-                            for(let i = pointTuples.length - 1; i >= 0; --i)
-                            {
-                                let tuple = pointTuples[i],
-                                    temp = tuple.controlIn;
+                            tangentPointTriple.controlIn = tangentPointTriple.controlOut;
+                            tangentPointTriple.controlOut = temp;
 
-                                tuple.controlIn = tuple.controlOut;
-                                tuple.controlOut = temp;
-
-                                reversedTuples.push(tuple);
-                            }
-
-                            return reversedTuples;
+                            return tangentPointTriple;
                         }
 
-                        // move the tangent points and control points inwards
-                        let lowerPointTuples = getShiftedTangentPointTriples(templatePointPairs.tangentPairs, shiftDown);
+                        
+                        let lowerPointTuples = [],
+                            tangentPointTriple = getShiftedTangentPointTriple(templatePointPairs.tangentPair, shiftDown);
 
-                        lowerPointTuples = reverse(lowerPointTuples);
+                        tangentPointTriple = reverse(tangentPointTriple);
 
-                        lowerPointTuples.splice(0, 0, pairClone(templatePointPairs.endPair));
+                        lowerPointTuples.push(pairClone(templatePointPairs.endPair));
+                        lowerPointTuples.push(tangentPointTriple);
                         lowerPointTuples.push(pairClone(templatePointPairs.startPair));
 
                         if(isTie === true)
@@ -542,7 +515,7 @@ export class Converter
                         height = (p2.y - p1.y) > 0 ? (p2.y - p1.y) : (p1.y - p2.y),
                         tp, tc;
                     
-                    if(templatePointPairs.tangentPairs.length === 0)
+                    if(templatePointPairs.tangentPair === undefined)
                     {                        
                         // p1.x, p1.y, p2y and p4x are constant
                         // p2.y defines the height of the tie
@@ -557,8 +530,8 @@ export class Converter
                     {
                         // p1.x, p1.y, tp.y and p4x are constant
                         // tp.y defines the height of the tie
-                        tp = templatePointPairs.tangentPairs[0].point;
-                        tc = templatePointPairs.tangentPairs[0].control;
+                        tp = templatePointPairs.tangentPair.point;
+                        tc = templatePointPairs.tangentPair.control;
                         height = (tp.y - p1.y) > 0 ? (tp.y - p1.y) : (p1.y - tp.y),
                         // p1.x and p1.y are constant
                         p2.x = p1.x + height; // 45°
@@ -592,7 +565,7 @@ export class Converter
                     templatePointPairs = normalizeTiePointPairs(templatePointPairs);
                 }
 
-                if(templatePointPairs.tangentPairs.length === 0)
+                if(templatePointPairs.tangentPair === undefined)
                 {
                     dStr = getShortDStr(templatePointPairs, templateStrokeWidth);
                 }
