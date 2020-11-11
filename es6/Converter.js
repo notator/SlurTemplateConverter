@@ -510,6 +510,7 @@ export class Converter
                     return dStr;
                 }
 
+                // Make the template horizontal and symmetric.
                 function normalizeTiePointPairs(templatePointPairs)
                 {
                     var p1 = templatePointPairs.startPair.point,
@@ -531,7 +532,7 @@ export class Converter
                         p3.y = p2.y;
                     }
                     else // three points with three control points
-                    {
+                    {                     
                         // p1.x, p1.y, tp.y and p4x are constant
                         // tp.y defines the height of the tie
                         tp = templatePointPairs.tangentPairs[0].point;
@@ -541,7 +542,7 @@ export class Converter
                         p2.x = p1.x + height; // 45°
                         p2.y = tp.y;
 
-                        tc.x = p2.x;
+                        tc.x = p2.x + (height / 2);
                         tc.y = p2.y;
 
                         tp.x = (p1.x + p4.x) / 2;
@@ -552,7 +553,6 @@ export class Converter
 
                         p3.x = p4.x - height; // 45°
                         p3.y = tp.y;
-
                     }
 
                     return templatePointPairs;
@@ -576,7 +576,6 @@ export class Converter
                 }
                 else
                 {
-                    //dStr = getShortSlurDStr(templatePointPairs, templateStrokeWidth);
                     dStr = getLongDStr(templatePointPairs, templateStrokeWidth);
                 }
 
