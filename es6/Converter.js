@@ -65,7 +65,7 @@ export class Converter
                             {
                                 if(dStr[i] === 'm' || dStr[i] === 'c' || dStr[i] === 's')
                                 {
-                                    throw "Relative path coordinates are not allowed."
+                                    throw "Relative path coordinates are not allowed.";
                                 }
 
                                 if(dStr[i] === 'M' || dStr[i] === 'Z' || dStr[i] === 'z')
@@ -165,15 +165,6 @@ export class Converter
                     return templatePointPairs;
                 }
 
-
-                function getAngledLine(controlLine, angle)
-                {
-                    let point = controlLine.point1.clone();
-                    point.rotate(controlLine.point0, angle);
-
-                    return new Line(controlLine.point0, point);
-                }
-
                 function getCoordinateString(point)
                 {
                     let xStr, yStr;
@@ -249,7 +240,7 @@ export class Converter
 
                     function getLowerControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth)
                     {
-                        let lowerControlPointsLine = getControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth, false)
+                        let lowerControlPointsLine = getControlPointsLine(tp1, tp2, tBezierLines, templateStrokeWidth, false);
 
                         return lowerControlPointsLine;
                     }
@@ -282,9 +273,6 @@ export class Converter
                     // Both the arguments and the returned string are absolute coordinates.
                     function getDStr(startPoint, outerCP1, outerCP2, endPoint, innerCP2, innerCP1)
                     {
-                        const relX = startPoint.x,
-                            relY = startPoint.y;
-
                         let point1Str = getCoordinateString(startPoint),
                             outerCP1Str = getCoordinateString(outerCP1),
                             outerCP2Str = getCoordinateString(outerCP2),

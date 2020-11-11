@@ -94,7 +94,7 @@ export class Line
 
         let returnPoint = null;
 
-        if(divisor == 0)
+        if(divisor === 0)
         {
             // The lines are parallel.
             returnPoint = new Point(Number.MAX_VALUE, Number.MAX_VALUE);
